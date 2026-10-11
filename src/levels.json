@@ -1,0 +1,5255 @@
+[
+ {
+  "minMoves": 1,
+  "tier": "easy",
+  "concept": "Vuốt để trượt, dừng sát cửa thì bị hút",
+  "needs": {
+   "brake": false,
+   "undo": false
+  },
+  "tutorial": {
+   "moves": [
+    "Swipe to slide!"
+   ]
+  },
+  "solution": [
+   {
+    "kind": "slide",
+    "id": "A",
+    "dir": "down"
+   }
+  ],
+  "level": {
+   "width": 4,
+   "height": 4,
+   "walls": [],
+   "balls": [
+    {
+     "id": "A",
+     "color": "pink",
+     "x": 0,
+     "y": 0
+    }
+   ],
+   "gates": [
+    {
+     "color": "pink",
+     "side": "down",
+     "index": 0
+    }
+   ],
+   "maxMoves": 4,
+   "trailLife": 2,
+   "trailClock": "owner"
+  }
+ },
+ {
+  "minMoves": 4,
+  "tier": "easy",
+  "concept": "Vệt biến mất sau 2 lượt đi của khối tạo ra nó",
+  "needs": {
+   "brake": false,
+   "undo": false
+  },
+  "tutorial": {
+   "moves": [
+    "Slide! Your jelly leaves a trail behind.",
+    "A trail pops after 2 more moves of its jelly. Keep sliding!",
+    "Slide again and watch the first trail pop!",
+    "It is gone! Slide to the gate!"
+   ]
+  },
+  "solution": [
+   {
+    "kind": "slide",
+    "id": "A",
+    "dir": "right"
+   },
+   {
+    "kind": "slide",
+    "id": "A",
+    "dir": "down"
+   },
+   {
+    "kind": "slide",
+    "id": "A",
+    "dir": "left"
+   },
+   {
+    "kind": "slide",
+    "id": "A",
+    "dir": "up"
+   }
+  ],
+  "level": {
+   "width": 5,
+   "height": 4,
+   "walls": [
+    {
+     "x": 0,
+     "y": 3
+    },
+    {
+     "x": 3,
+     "y": 2
+    }
+   ],
+   "balls": [
+    {
+     "id": "A",
+     "color": "pink",
+     "x": 3,
+     "y": 0
+    }
+   ],
+   "gates": [
+    {
+     "color": "pink",
+     "side": "up",
+     "index": 1
+    }
+   ],
+   "maxMoves": 7,
+   "trailLife": 2,
+   "trailClock": "owner"
+  }
+ },
+ {
+  "minMoves": 3,
+  "tier": "easy",
+  "concept": "Dùng mép bàn và tường để chỉnh vị trí",
+  "needs": {
+   "brake": false,
+   "undo": false
+  },
+  "solution": [
+   {
+    "kind": "slide",
+    "id": "A",
+    "dir": "down"
+   },
+   {
+    "kind": "slide",
+    "id": "A",
+    "dir": "left"
+   },
+   {
+    "kind": "slide",
+    "id": "A",
+    "dir": "up"
+   }
+  ],
+  "level": {
+   "width": 5,
+   "height": 5,
+   "walls": [
+    {
+     "x": 0,
+     "y": 2
+    },
+    {
+     "x": 1,
+     "y": 3
+    }
+   ],
+   "balls": [
+    {
+     "id": "A",
+     "color": "pink",
+     "x": 4,
+     "y": 3
+    }
+   ],
+   "gates": [
+    {
+     "color": "pink",
+     "side": "left",
+     "index": 3
+    }
+   ],
+   "maxMoves": 6,
+   "trailLife": 2,
+   "trailClock": "owner"
+  }
+ },
+ {
+  "minMoves": 3,
+  "tier": "easy",
+  "concept": "Bàn kim cương: đi nhiều hướng, độ khó ngang level 3",
+  "needs": {
+   "brake": false,
+   "undo": false
+  },
+  "solution": [
+   {
+    "kind": "slide",
+    "id": "A",
+    "dir": "up"
+   },
+   {
+    "kind": "slide",
+    "id": "A",
+    "dir": "right"
+   },
+   {
+    "kind": "slide",
+    "id": "A",
+    "dir": "down"
+   }
+  ],
+  "level": {
+   "width": 7,
+   "height": 7,
+   "mask": [
+    "...#...",
+    "..###..",
+    ".#####.",
+    "#######",
+    ".#####.",
+    "..###..",
+    "...#..."
+   ],
+   "walls": [
+    {
+     "x": 2,
+     "y": 4
+    },
+    {
+     "x": 1,
+     "y": 4
+    }
+   ],
+   "balls": [
+    {
+     "id": "A",
+     "color": "pink",
+     "x": 2,
+     "y": 2
+    }
+   ],
+   "gates": [
+    {
+     "color": "pink",
+     "side": "right",
+     "index": 5,
+     "depth": 2
+    }
+   ],
+   "maxMoves": 6,
+   "trailLife": 2,
+   "trailClock": "owner"
+  }
+ },
+ {
+  "minMoves": 8,
+  "tier": "hard",
+  "concept": "KHÓ: hai khối đầu tiên, bắt buộc phanh bằng vệt và hoàn tác, dư 2 lượt",
+  "needs": {
+   "brake": true,
+   "undo": true
+  },
+  "tutorial": {
+   "moves": [
+    "Swipe the jelly toward its gate!",
+    "Your jelly leaves a trail behind.",
+    "Trails are brakes! Slide into the trail to stop right beside it."
+   ]
+  },
+  "solution": [
+   {
+    "kind": "slide",
+    "id": "A",
+    "dir": "up"
+   },
+   {
+    "kind": "slide",
+    "id": "A",
+    "dir": "right"
+   },
+   {
+    "kind": "slide",
+    "id": "B",
+    "dir": "left"
+   },
+   {
+    "kind": "undo",
+    "id": "A"
+   },
+   {
+    "kind": "slide",
+    "id": "B",
+    "dir": "left"
+   },
+   {
+    "kind": "slide",
+    "id": "A",
+    "dir": "down"
+   },
+   {
+    "kind": "undo",
+    "id": "B"
+   },
+   {
+    "kind": "slide",
+    "id": "B",
+    "dir": "down"
+   }
+  ],
+  "level": {
+   "width": 5,
+   "height": 5,
+   "walls": [
+    {
+     "x": 3,
+     "y": 2
+    },
+    {
+     "x": 4,
+     "y": 0
+    }
+   ],
+   "balls": [
+    {
+     "id": "A",
+     "color": "pink",
+     "x": 0,
+     "y": 4
+    },
+    {
+     "id": "B",
+     "color": "teal",
+     "x": 2,
+     "y": 3
+    }
+   ],
+   "gates": [
+    {
+     "color": "pink",
+     "side": "left",
+     "index": 2
+    },
+    {
+     "color": "teal",
+     "side": "down",
+     "index": 1
+    }
+   ],
+   "maxMoves": 10,
+   "trailLife": 2,
+   "trailClock": "owner"
+  }
+ },
+ {
+  "minMoves": 5,
+  "tier": "easy",
+  "concept": "Thạch một trục: giới thiệu sớm (một khối chỉ trượt dọc theo mũi tên)",
+  "needs": {
+   "brake": false,
+   "undo": false
+  },
+  "introduces": "axis",
+  "solution": [
+   {
+    "kind": "slide",
+    "id": "B",
+    "dir": "down"
+   },
+   {
+    "kind": "slide",
+    "id": "B",
+    "dir": "right"
+   },
+   {
+    "kind": "slide",
+    "id": "A",
+    "dir": "down"
+   },
+   {
+    "kind": "slide",
+    "id": "B",
+    "dir": "up"
+   },
+   {
+    "kind": "slide",
+    "id": "B",
+    "dir": "left"
+   }
+  ],
+  "level": {
+   "width": 5,
+   "height": 5,
+   "walls": [
+    {
+     "x": 0,
+     "y": 4
+    }
+   ],
+   "balls": [
+    {
+     "id": "A",
+     "color": "pink",
+     "x": 4,
+     "y": 0,
+     "axis": "v"
+    },
+    {
+     "id": "B",
+     "color": "teal",
+     "x": 2,
+     "y": 0
+    }
+   ],
+   "gates": [
+    {
+     "color": "pink",
+     "side": "right",
+     "index": 3
+    },
+    {
+     "color": "teal",
+     "side": "left",
+     "index": 0
+    }
+   ],
+   "maxMoves": 8,
+   "trailLife": 2,
+   "trailClock": "owner"
+  }
+ },
+ {
+  "minMoves": 5,
+  "tier": "medium",
+  "concept": "Vệt của khối này chặn khối kia, một khối chỉ đi một trục",
+  "needs": {
+   "brake": false,
+   "undo": false
+  },
+  "solution": [
+   {
+    "kind": "slide",
+    "id": "A",
+    "dir": "up"
+   },
+   {
+    "kind": "slide",
+    "id": "A",
+    "dir": "right"
+   },
+   {
+    "kind": "slide",
+    "id": "A",
+    "dir": "up"
+   },
+   {
+    "kind": "slide",
+    "id": "A",
+    "dir": "left"
+   },
+   {
+    "kind": "slide",
+    "id": "B",
+    "dir": "down"
+   }
+  ],
+  "level": {
+   "width": 6,
+   "height": 6,
+   "mask": [
+    "##....",
+    "##....",
+    "##....",
+    "##....",
+    "######",
+    "######"
+   ],
+   "walls": [
+    {
+     "x": 5,
+     "y": 4
+    },
+    {
+     "x": 4,
+     "y": 4
+    },
+    {
+     "x": 3,
+     "y": 5
+    }
+   ],
+   "balls": [
+    {
+     "id": "A",
+     "color": "pink",
+     "x": 0,
+     "y": 4
+    },
+    {
+     "id": "B",
+     "color": "teal",
+     "x": 0,
+     "y": 1,
+     "axis": "v"
+    }
+   ],
+   "gates": [
+    {
+     "color": "pink",
+     "side": "left",
+     "index": 0
+    },
+    {
+     "color": "teal",
+     "side": "left",
+     "index": 5
+    }
+   ],
+   "maxMoves": 7,
+   "trailLife": 2,
+   "trailClock": "owner"
+  }
+ },
+ {
+  "minMoves": 5,
+  "tier": "medium",
+  "concept": "Mở khoá Block: đặt khối vĩnh viễn",
+  "needs": {
+   "brake": false,
+   "undo": false
+  },
+  "helps": "pin",
+  "unlocks": "pin",
+  "tutorial": {
+   "moves": [],
+   "intro": "New booster: Block!"
+  },
+  "solution": [
+   {
+    "kind": "slide",
+    "id": "A",
+    "dir": "left"
+   },
+   {
+    "kind": "pin",
+    "x": 2,
+    "y": 1
+   },
+   {
+    "kind": "slide",
+    "id": "B",
+    "dir": "up"
+   },
+   {
+    "kind": "slide",
+    "id": "B",
+    "dir": "left"
+   }
+  ],
+  "level": {
+   "width": 6,
+   "height": 6,
+   "mask": [
+    "..##..",
+    ".####.",
+    "######",
+    "######",
+    ".####.",
+    "..##.."
+   ],
+   "walls": [
+    {
+     "x": 3,
+     "y": 2
+    }
+   ],
+   "balls": [
+    {
+     "id": "A",
+     "color": "pink",
+     "x": 3,
+     "y": 1
+    },
+    {
+     "id": "B",
+     "color": "teal",
+     "x": 2,
+     "y": 5
+    }
+   ],
+   "gates": [
+    {
+     "color": "pink",
+     "side": "up",
+     "index": 1,
+     "depth": 1
+    },
+    {
+     "color": "teal",
+     "side": "left",
+     "index": 2
+    }
+   ],
+   "maxMoves": 8,
+   "trailLife": 2,
+   "trailClock": "owner"
+  }
+ },
+ {
+  "minMoves": 4,
+  "tier": "medium",
+  "concept": "Vệt làm phanh: dừng nhờ vệt của khối kia",
+  "needs": {
+   "brake": true,
+   "undo": false
+  },
+  "solution": [
+   {
+    "kind": "slide",
+    "id": "A",
+    "dir": "right"
+   },
+   {
+    "kind": "slide",
+    "id": "B",
+    "dir": "right"
+   },
+   {
+    "kind": "slide",
+    "id": "A",
+    "dir": "down"
+   },
+   {
+    "kind": "slide",
+    "id": "B",
+    "dir": "up"
+   }
+  ],
+  "level": {
+   "width": 7,
+   "height": 7,
+   "mask": [
+    "..###..",
+    "..###..",
+    "#######",
+    "#######",
+    "#######",
+    "..###..",
+    "..###.."
+   ],
+   "walls": [
+    {
+     "x": 4,
+     "y": 0
+    },
+    {
+     "x": 1,
+     "y": 4
+    },
+    {
+     "x": 3,
+     "y": 0
+    }
+   ],
+   "balls": [
+    {
+     "id": "A",
+     "color": "pink",
+     "x": 2,
+     "y": 1
+    },
+    {
+     "id": "B",
+     "color": "teal",
+     "x": 3,
+     "y": 6
+    }
+   ],
+   "gates": [
+    {
+     "color": "pink",
+     "side": "right",
+     "index": 5,
+     "depth": 2
+    },
+    {
+     "color": "teal",
+     "side": "right",
+     "index": 1,
+     "depth": 2
+    }
+   ],
+   "maxMoves": 6,
+   "trailLife": 2,
+   "trailClock": "owner"
+  }
+ },
+ {
+  "minMoves": 10,
+  "tier": "super",
+  "concept": "SIÊU KHÓ: vệt khối này chặn khối kia, phanh bắt buộc, chỉ dư 1 lượt",
+  "needs": {
+   "brake": true,
+   "undo": true
+  },
+  "solution": [
+   {
+    "kind": "slide",
+    "id": "A",
+    "dir": "right"
+   },
+   {
+    "kind": "slide",
+    "id": "B",
+    "dir": "left"
+   },
+   {
+    "kind": "slide",
+    "id": "B",
+    "dir": "down"
+   },
+   {
+    "kind": "undo",
+    "id": "B"
+   },
+   {
+    "kind": "slide",
+    "id": "B",
+    "dir": "right"
+   },
+   {
+    "kind": "slide",
+    "id": "B",
+    "dir": "down"
+   },
+   {
+    "kind": "undo",
+    "id": "A"
+   },
+   {
+    "kind": "slide",
+    "id": "A",
+    "dir": "up"
+   },
+   {
+    "kind": "slide",
+    "id": "A",
+    "dir": "left"
+   },
+   {
+    "kind": "slide",
+    "id": "B",
+    "dir": "right"
+   }
+  ],
+  "level": {
+   "width": 7,
+   "height": 7,
+   "mask": [
+    "...#...",
+    "..###..",
+    ".#####.",
+    "#######",
+    ".#####.",
+    "..###..",
+    "...#..."
+   ],
+   "walls": [
+    {
+     "x": 3,
+     "y": 3
+    },
+    {
+     "x": 3,
+     "y": 6
+    },
+    {
+     "x": 5,
+     "y": 4
+    },
+    {
+     "x": 4,
+     "y": 5
+    },
+    {
+     "x": 5,
+     "y": 2
+    }
+   ],
+   "balls": [
+    {
+     "id": "A",
+     "color": "pink",
+     "x": 2,
+     "y": 4
+    },
+    {
+     "id": "B",
+     "color": "teal",
+     "x": 3,
+     "y": 2
+    }
+   ],
+   "gates": [
+    {
+     "color": "pink",
+     "side": "down",
+     "index": 0,
+     "depth": 3
+    },
+    {
+     "color": "teal",
+     "side": "down",
+     "index": 6,
+     "depth": 3
+    }
+   ],
+   "maxMoves": 11,
+   "trailLife": 2,
+   "trailClock": "owner"
+  }
+ },
+ {
+  "minMoves": 4,
+  "tier": "medium",
+  "concept": "Mở khoá Rainbow Gate",
+  "needs": {
+   "brake": false,
+   "undo": false
+  },
+  "helps": "basket",
+  "unlocks": "basket",
+  "tutorial": {
+   "moves": [],
+   "intro": "New booster: Rainbow Gate!"
+  },
+  "solution": [
+   {
+    "kind": "basket",
+    "side": "left",
+    "index": 4
+   },
+   {
+    "kind": "slide",
+    "id": "A",
+    "dir": "left"
+   },
+   {
+    "kind": "slide",
+    "id": "A",
+    "dir": "down"
+   },
+   {
+    "kind": "slide",
+    "id": "B",
+    "dir": "left"
+   }
+  ],
+  "level": {
+   "width": 6,
+   "height": 5,
+   "walls": [
+    {
+     "x": 4,
+     "y": 0
+    },
+    {
+     "x": 4,
+     "y": 3
+    }
+   ],
+   "balls": [
+    {
+     "id": "A",
+     "color": "pink",
+     "x": 4,
+     "y": 2
+    },
+    {
+     "id": "B",
+     "color": "teal",
+     "x": 4,
+     "y": 4
+    }
+   ],
+   "gates": [
+    {
+     "color": "pink",
+     "side": "left",
+     "index": 4
+    },
+    {
+     "color": "teal",
+     "side": "left",
+     "index": 0
+    }
+   ],
+   "maxMoves": 6,
+   "trailLife": 2,
+   "trailClock": "owner"
+  }
+ },
+ {
+  "minMoves": 6,
+  "tier": "medium",
+  "concept": "Bàn bậc thang: hai khối, thứ tự đi quan trọng",
+  "needs": {
+   "brake": false,
+   "undo": false
+  },
+  "solution": [
+   {
+    "kind": "slide",
+    "id": "B",
+    "dir": "up"
+   },
+   {
+    "kind": "slide",
+    "id": "B",
+    "dir": "left"
+   },
+   {
+    "kind": "slide",
+    "id": "B",
+    "dir": "down"
+   },
+   {
+    "kind": "slide",
+    "id": "A",
+    "dir": "up"
+   },
+   {
+    "kind": "slide",
+    "id": "A",
+    "dir": "left"
+   },
+   {
+    "kind": "slide",
+    "id": "A",
+    "dir": "up"
+   }
+  ],
+  "level": {
+   "width": 6,
+   "height": 6,
+   "mask": [
+    "#.....",
+    "##....",
+    "###...",
+    "####..",
+    "#####.",
+    "######"
+   ],
+   "walls": [
+    {
+     "x": 4,
+     "y": 4
+    },
+    {
+     "x": 1,
+     "y": 1
+    },
+    {
+     "x": 1,
+     "y": 3
+    }
+   ],
+   "balls": [
+    {
+     "id": "A",
+     "color": "pink",
+     "x": 3,
+     "y": 5
+    },
+    {
+     "id": "B",
+     "color": "teal",
+     "x": 3,
+     "y": 4
+    }
+   ],
+   "gates": [
+    {
+     "color": "pink",
+     "side": "up",
+     "index": 2,
+     "depth": 2
+    },
+    {
+     "color": "teal",
+     "side": "down",
+     "index": 2
+    }
+   ],
+   "maxMoves": 8,
+   "trailLife": 2,
+   "trailClock": "owner"
+  }
+ },
+ {
+  "minMoves": 5,
+  "tier": "easy",
+  "concept": "Thạch một trục: luyện lại sau khi học ở L6 (không hướng dẫn)",
+  "needs": {
+   "brake": false,
+   "undo": false
+  },
+  "solution": [
+   {
+    "kind": "slide",
+    "id": "A",
+    "dir": "down"
+   },
+   {
+    "kind": "slide",
+    "id": "A",
+    "dir": "right"
+   },
+   {
+    "kind": "slide",
+    "id": "A",
+    "dir": "up"
+   },
+   {
+    "kind": "slide",
+    "id": "A",
+    "dir": "left"
+   },
+   {
+    "kind": "slide",
+    "id": "B",
+    "dir": "down"
+   }
+  ],
+  "level": {
+   "width": 5,
+   "height": 5,
+   "walls": [
+    {
+     "x": 1,
+     "y": 2
+    }
+   ],
+   "balls": [
+    {
+     "id": "A",
+     "color": "pink",
+     "x": 0,
+     "y": 2
+    },
+    {
+     "id": "B",
+     "color": "teal",
+     "x": 0,
+     "y": 1,
+     "axis": "v"
+    }
+   ],
+   "gates": [
+    {
+     "color": "pink",
+     "side": "left",
+     "index": 0
+    },
+    {
+     "color": "teal",
+     "side": "left",
+     "index": 4
+    }
+   ],
+   "maxMoves": 8,
+   "trailLife": 2,
+   "trailClock": "owner"
+  }
+ },
+ {
+  "minMoves": 6,
+  "tier": "medium",
+  "concept": "Một trục cộng vệt chặn khối kia",
+  "needs": {
+   "brake": false,
+   "undo": false
+  },
+  "solution": [
+   {
+    "kind": "slide",
+    "id": "A",
+    "dir": "down"
+   },
+   {
+    "kind": "slide",
+    "id": "A",
+    "dir": "left"
+   },
+   {
+    "kind": "slide",
+    "id": "A",
+    "dir": "up"
+   },
+   {
+    "kind": "slide",
+    "id": "A",
+    "dir": "right"
+   },
+   {
+    "kind": "slide",
+    "id": "A",
+    "dir": "down"
+   },
+   {
+    "kind": "slide",
+    "id": "B",
+    "dir": "right"
+   }
+  ],
+  "level": {
+   "width": 6,
+   "height": 6,
+   "mask": [
+    "##....",
+    "##....",
+    "##....",
+    "##....",
+    "######",
+    "######"
+   ],
+   "walls": [
+    {
+     "x": 0,
+     "y": 3
+    },
+    {
+     "x": 0,
+     "y": 0
+    }
+   ],
+   "balls": [
+    {
+     "id": "A",
+     "color": "pink",
+     "x": 1,
+     "y": 3
+    },
+    {
+     "id": "B",
+     "color": "teal",
+     "x": 4,
+     "y": 4,
+     "axis": "h"
+    }
+   ],
+   "gates": [
+    {
+     "color": "pink",
+     "side": "down",
+     "index": 3
+    },
+    {
+     "color": "teal",
+     "side": "right",
+     "index": 4
+    }
+   ],
+   "maxMoves": 8,
+   "trailLife": 2,
+   "trailClock": "owner"
+  }
+ },
+ {
+  "minMoves": 8,
+  "tier": "hard",
+  "concept": "KHÓ: hai khối, một khối chỉ đi một trục, phanh bắt buộc, dư 1 lượt",
+  "needs": {
+   "brake": true,
+   "undo": true
+  },
+  "solution": [
+   {
+    "kind": "slide",
+    "id": "A",
+    "dir": "right"
+   },
+   {
+    "kind": "slide",
+    "id": "B",
+    "dir": "right"
+   },
+   {
+    "kind": "slide",
+    "id": "A",
+    "dir": "down"
+   },
+   {
+    "kind": "slide",
+    "id": "A",
+    "dir": "left"
+   },
+   {
+    "kind": "undo",
+    "id": "B"
+   },
+   {
+    "kind": "slide",
+    "id": "A",
+    "dir": "down"
+   },
+   {
+    "kind": "slide",
+    "id": "B",
+    "dir": "right"
+   },
+   {
+    "kind": "slide",
+    "id": "A",
+    "dir": "right"
+   }
+  ],
+  "level": {
+   "width": 6,
+   "height": 6,
+   "mask": [
+    "######",
+    "######",
+    "##..##",
+    "##..##",
+    "######",
+    "######"
+   ],
+   "walls": [
+    {
+     "x": 1,
+     "y": 1
+    },
+    {
+     "x": 2,
+     "y": 5
+    }
+   ],
+   "balls": [
+    {
+     "id": "A",
+     "color": "pink",
+     "x": 3,
+     "y": 1
+    },
+    {
+     "id": "B",
+     "color": "teal",
+     "x": 1,
+     "y": 4,
+     "axis": "h"
+    }
+   ],
+   "gates": [
+    {
+     "color": "pink",
+     "side": "down",
+     "index": 5
+    },
+    {
+     "color": "teal",
+     "side": "up",
+     "index": 3,
+     "depth": 4
+    }
+   ],
+   "maxMoves": 9,
+   "trailLife": 2,
+   "trailClock": "owner"
+  }
+ },
+ {
+  "minMoves": 5,
+  "tier": "easy",
+  "concept": "Mở khoá Magnet: lần đầu có ba khối",
+  "needs": {
+   "brake": false,
+   "undo": false
+  },
+  "helps": "magnet",
+  "unlocks": "magnet",
+  "tutorial": {
+   "moves": [],
+   "intro": "New booster: Magnet!"
+  },
+  "solution": [
+   {
+    "kind": "slide",
+    "id": "C",
+    "dir": "up"
+   },
+   {
+    "kind": "magnet",
+    "id": "C"
+   },
+   {
+    "kind": "slide",
+    "id": "A",
+    "dir": "down"
+   },
+   {
+    "kind": "slide",
+    "id": "A",
+    "dir": "right"
+   },
+   {
+    "kind": "slide",
+    "id": "B",
+    "dir": "right"
+   }
+  ],
+  "level": {
+   "width": 6,
+   "height": 6,
+   "mask": [
+    "..##..",
+    ".####.",
+    "######",
+    "######",
+    ".####.",
+    "..##.."
+   ],
+   "walls": [
+    {
+     "x": 4,
+     "y": 4
+    },
+    {
+     "x": 2,
+     "y": 2
+    }
+   ],
+   "balls": [
+    {
+     "id": "A",
+     "color": "pink",
+     "x": 2,
+     "y": 3
+    },
+    {
+     "id": "B",
+     "color": "teal",
+     "x": 1,
+     "y": 3
+    },
+    {
+     "id": "C",
+     "color": "gold",
+     "x": 3,
+     "y": 5
+    }
+   ],
+   "gates": [
+    {
+     "color": "pink",
+     "side": "down",
+     "index": 3
+    },
+    {
+     "color": "teal",
+     "side": "down",
+     "index": 5,
+     "depth": 2
+    },
+    {
+     "color": "gold",
+     "side": "left",
+     "index": 0,
+     "depth": 2
+    }
+   ],
+   "maxMoves": 8,
+   "trailLife": 2,
+   "trailClock": "owner"
+  }
+ },
+ {
+  "minMoves": 5,
+  "tier": "medium",
+  "concept": "Magnet trên bàn đồng hồ cát",
+  "needs": {
+   "brake": false,
+   "undo": false
+  },
+  "helps": "magnet",
+  "solution": [
+   {
+    "kind": "magnet",
+    "id": "B"
+   },
+   {
+    "kind": "slide",
+    "id": "A",
+    "dir": "down"
+   },
+   {
+    "kind": "slide",
+    "id": "A",
+    "dir": "left"
+   },
+   {
+    "kind": "slide",
+    "id": "C",
+    "dir": "up"
+   },
+   {
+    "kind": "slide",
+    "id": "C",
+    "dir": "right"
+   }
+  ],
+  "level": {
+   "width": 7,
+   "height": 7,
+   "mask": [
+    "#######",
+    ".#####.",
+    "..###..",
+    "...#...",
+    "..###..",
+    ".#####.",
+    "#######"
+   ],
+   "walls": [
+    {
+     "x": 2,
+     "y": 0
+    },
+    {
+     "x": 3,
+     "y": 3
+    },
+    {
+     "x": 4,
+     "y": 4
+    }
+   ],
+   "balls": [
+    {
+     "id": "A",
+     "color": "pink",
+     "x": 4,
+     "y": 5
+    },
+    {
+     "id": "B",
+     "color": "teal",
+     "x": 3,
+     "y": 2
+    },
+    {
+     "id": "C",
+     "color": "gold",
+     "x": 3,
+     "y": 1
+    }
+   ],
+   "gates": [
+    {
+     "color": "pink",
+     "side": "up",
+     "index": 0,
+     "depth": 6
+    },
+    {
+     "color": "teal",
+     "side": "up",
+     "index": 3
+    },
+    {
+     "color": "gold",
+     "side": "up",
+     "index": 6
+    }
+   ],
+   "maxMoves": 7,
+   "trailLife": 2,
+   "trailClock": "owner"
+  }
+ },
+ {
+  "minMoves": 7,
+  "tier": "easy",
+  "concept": "Chuỗi vệt giữa ba khối trên bàn bậc thang",
+  "needs": {
+   "brake": false,
+   "undo": false
+  },
+  "solution": [
+   {
+    "kind": "slide",
+    "id": "A",
+    "dir": "down"
+   },
+   {
+    "kind": "slide",
+    "id": "A",
+    "dir": "right"
+   },
+   {
+    "kind": "slide",
+    "id": "B",
+    "dir": "up"
+   },
+   {
+    "kind": "slide",
+    "id": "B",
+    "dir": "right"
+   },
+   {
+    "kind": "slide",
+    "id": "B",
+    "dir": "up"
+   },
+   {
+    "kind": "slide",
+    "id": "C",
+    "dir": "down"
+   },
+   {
+    "kind": "slide",
+    "id": "C",
+    "dir": "right"
+   }
+  ],
+  "level": {
+   "width": 6,
+   "height": 6,
+   "mask": [
+    "#.....",
+    "##....",
+    "###...",
+    "####..",
+    "#####.",
+    "######"
+   ],
+   "walls": [
+    {
+     "x": 1,
+     "y": 5
+    },
+    {
+     "x": 0,
+     "y": 3
+    },
+    {
+     "x": 0,
+     "y": 0
+    }
+   ],
+   "balls": [
+    {
+     "id": "A",
+     "color": "pink",
+     "x": 2,
+     "y": 3
+    },
+    {
+     "id": "B",
+     "color": "teal",
+     "x": 0,
+     "y": 5
+    },
+    {
+     "id": "C",
+     "color": "pink",
+     "x": 3,
+     "y": 4
+    }
+   ],
+   "gates": [
+    {
+     "color": "pink",
+     "side": "down",
+     "index": 5
+    },
+    {
+     "color": "teal",
+     "side": "up",
+     "index": 2,
+     "depth": 2
+    }
+   ],
+   "maxMoves": 10,
+   "trailLife": 2,
+   "trailClock": "owner"
+  }
+ },
+ {
+  "minMoves": 7,
+  "tier": "medium",
+  "concept": "Chữ L lớn, ba khối, cần phanh",
+  "needs": {
+   "brake": true,
+   "undo": false
+  },
+  "solution": [
+   {
+    "kind": "slide",
+    "id": "C",
+    "dir": "left"
+   },
+   {
+    "kind": "slide",
+    "id": "A",
+    "dir": "down"
+   },
+   {
+    "kind": "slide",
+    "id": "B",
+    "dir": "left"
+   },
+   {
+    "kind": "slide",
+    "id": "C",
+    "dir": "up"
+   },
+   {
+    "kind": "slide",
+    "id": "C",
+    "dir": "right"
+   },
+   {
+    "kind": "slide",
+    "id": "B",
+    "dir": "down"
+   },
+   {
+    "kind": "slide",
+    "id": "A",
+    "dir": "right"
+   }
+  ],
+  "level": {
+   "width": 7,
+   "height": 7,
+   "mask": [
+    "##.....",
+    "##.....",
+    "##.....",
+    "##.....",
+    "##.....",
+    "#######",
+    "#######"
+   ],
+   "walls": [
+    {
+     "x": 5,
+     "y": 5
+    },
+    {
+     "x": 6,
+     "y": 6
+    }
+   ],
+   "balls": [
+    {
+     "id": "A",
+     "color": "pink",
+     "x": 1,
+     "y": 2
+    },
+    {
+     "id": "B",
+     "color": "teal",
+     "x": 3,
+     "y": 5
+    },
+    {
+     "id": "C",
+     "color": "gold",
+     "x": 3,
+     "y": 6
+    }
+   ],
+   "gates": [
+    {
+     "color": "pink",
+     "side": "up",
+     "index": 4,
+     "depth": 5
+    },
+    {
+     "color": "teal",
+     "side": "down",
+     "index": 2
+    },
+    {
+     "color": "gold",
+     "side": "right",
+     "index": 0,
+     "depth": 5
+    }
+   ],
+   "maxMoves": 9,
+   "trailLife": 2,
+   "trailClock": "owner"
+  }
+ },
+ {
+  "minMoves": 10,
+  "tier": "super",
+  "concept": "SIÊU KHÓ: ba khối, phanh bắt buộc, chỉ dư 1 lượt",
+  "needs": {
+   "brake": true,
+   "undo": false
+  },
+  "solution": [
+   {
+    "kind": "slide",
+    "id": "A",
+    "dir": "right"
+   },
+   {
+    "kind": "slide",
+    "id": "A",
+    "dir": "down"
+   },
+   {
+    "kind": "slide",
+    "id": "C",
+    "dir": "right"
+   },
+   {
+    "kind": "slide",
+    "id": "C",
+    "dir": "down"
+   },
+   {
+    "kind": "slide",
+    "id": "A",
+    "dir": "left"
+   },
+   {
+    "kind": "slide",
+    "id": "C",
+    "dir": "right"
+   },
+   {
+    "kind": "slide",
+    "id": "B",
+    "dir": "down"
+   },
+   {
+    "kind": "slide",
+    "id": "B",
+    "dir": "right"
+   },
+   {
+    "kind": "slide",
+    "id": "A",
+    "dir": "down"
+   },
+   {
+    "kind": "slide",
+    "id": "B",
+    "dir": "down"
+   }
+  ],
+  "level": {
+   "width": 7,
+   "height": 7,
+   "mask": [
+    "..###..",
+    ".#####.",
+    "#######",
+    "#######",
+    "#######",
+    ".#####.",
+    "..###.."
+   ],
+   "walls": [
+    {
+     "x": 4,
+     "y": 2
+    },
+    {
+     "x": 6,
+     "y": 3
+    },
+    {
+     "x": 2,
+     "y": 4
+    },
+    {
+     "x": 0,
+     "y": 3
+    }
+   ],
+   "balls": [
+    {
+     "id": "A",
+     "color": "pink",
+     "x": 2,
+     "y": 1
+    },
+    {
+     "id": "B",
+     "color": "teal",
+     "x": 1,
+     "y": 1
+    },
+    {
+     "id": "C",
+     "color": "pink",
+     "x": 1,
+     "y": 2
+    }
+   ],
+   "gates": [
+    {
+     "color": "pink",
+     "side": "right",
+     "index": 6,
+     "depth": 2
+    },
+    {
+     "color": "teal",
+     "side": "down",
+     "index": 3
+    }
+   ],
+   "maxMoves": 11,
+   "trailLife": 2,
+   "trailClock": "owner"
+  }
+ },
+ {
+  "minMoves": 5,
+  "tier": "easy",
+  "concept": "Mở khoá Jelly Bomb: tách khối dính nhau",
+  "needs": {
+   "brake": false,
+   "undo": false
+  },
+  "helps": "bomb",
+  "unlocks": "bomb",
+  "tutorial": {
+   "moves": [],
+   "intro": "New booster: Jelly Bomb!"
+  },
+  "solution": [
+   {
+    "kind": "slide",
+    "id": "C",
+    "dir": "right"
+   },
+   {
+    "kind": "bomb",
+    "x": 4,
+    "y": 1
+   },
+   {
+    "kind": "slide",
+    "id": "A",
+    "dir": "down"
+   },
+   {
+    "kind": "slide",
+    "id": "A",
+    "dir": "left"
+   },
+   {
+    "kind": "slide",
+    "id": "B",
+    "dir": "down"
+   }
+  ],
+  "level": {
+   "width": 5,
+   "height": 5,
+   "mask": [
+    ".###.",
+    "#####",
+    "#####",
+    "#####",
+    ".###."
+   ],
+   "walls": [
+    {
+     "x": 2,
+     "y": 2
+    }
+   ],
+   "balls": [
+    {
+     "id": "A",
+     "color": "pink",
+     "x": 3,
+     "y": 3
+    },
+    {
+     "id": "B",
+     "color": "teal",
+     "x": 1,
+     "y": 1
+    },
+    {
+     "id": "C",
+     "color": "gold",
+     "x": 3,
+     "y": 2
+    }
+   ],
+   "gates": [
+    {
+     "color": "pink",
+     "side": "left",
+     "index": 4,
+     "depth": 1
+    },
+    {
+     "color": "teal",
+     "side": "down",
+     "index": 1
+    },
+    {
+     "color": "gold",
+     "side": "right",
+     "index": 3
+    }
+   ],
+   "maxMoves": 7,
+   "trailLife": 2,
+   "trailClock": "owner"
+  }
+ },
+ {
+  "minMoves": 4,
+  "tier": "easy",
+  "concept": "Thạch ẩn: giới thiệu (màu suy ra bằng loại trừ)",
+  "needs": {
+   "brake": false,
+   "undo": false
+  },
+  "introduces": "hidden",
+  "solution": [
+   {
+    "kind": "slide",
+    "id": "A",
+    "dir": "right"
+   },
+   {
+    "kind": "slide",
+    "id": "B",
+    "dir": "left"
+   },
+   {
+    "kind": "slide",
+    "id": "C",
+    "dir": "down"
+   },
+   {
+    "kind": "slide",
+    "id": "C",
+    "dir": "right"
+   }
+  ],
+  "level": {
+   "width": 5,
+   "height": 5,
+   "walls": [
+    {
+     "x": 2,
+     "y": 2
+    }
+   ],
+   "balls": [
+    {
+     "id": "A",
+     "color": "pink",
+     "x": 0,
+     "y": 4,
+     "hidden": true
+    },
+    {
+     "id": "B",
+     "color": "teal",
+     "x": 3,
+     "y": 1
+    },
+    {
+     "id": "C",
+     "color": "pink",
+     "x": 2,
+     "y": 3
+    }
+   ],
+   "gates": [
+    {
+     "color": "pink",
+     "side": "down",
+     "index": 4
+    },
+    {
+     "color": "teal",
+     "side": "left",
+     "index": 1
+    }
+   ],
+   "maxMoves": 7,
+   "trailLife": 2,
+   "trailClock": "owner"
+  }
+ },
+ {
+  "minMoves": 5,
+  "tier": "medium",
+  "concept": "Thạch ẩn trên bàn chữ nhật",
+  "needs": {
+   "brake": false,
+   "undo": false
+  },
+  "solution": [
+   {
+    "kind": "slide",
+    "id": "A",
+    "dir": "up"
+   },
+   {
+    "kind": "slide",
+    "id": "A",
+    "dir": "right"
+   },
+   {
+    "kind": "slide",
+    "id": "B",
+    "dir": "left"
+   },
+   {
+    "kind": "slide",
+    "id": "C",
+    "dir": "up"
+   },
+   {
+    "kind": "slide",
+    "id": "C",
+    "dir": "right"
+   }
+  ],
+  "level": {
+   "width": 6,
+   "height": 5,
+   "walls": [
+    {
+     "x": 4,
+     "y": 4
+    }
+   ],
+   "balls": [
+    {
+     "id": "A",
+     "color": "pink",
+     "x": 0,
+     "y": 1
+    },
+    {
+     "id": "B",
+     "color": "teal",
+     "x": 2,
+     "y": 2
+    },
+    {
+     "id": "C",
+     "color": "pink",
+     "x": 4,
+     "y": 1,
+     "hidden": true
+    }
+   ],
+   "gates": [
+    {
+     "color": "pink",
+     "side": "up",
+     "index": 5
+    },
+    {
+     "color": "teal",
+     "side": "left",
+     "index": 2
+    }
+   ],
+   "maxMoves": 7,
+   "trailLife": 2,
+   "trailClock": "owner"
+  }
+ },
+ {
+  "minMoves": 7,
+  "tier": "medium",
+  "concept": "Thạch ẩn, vòng có lỗ, cần phanh",
+  "needs": {
+   "brake": true,
+   "undo": false
+  },
+  "solution": [
+   {
+    "kind": "slide",
+    "id": "B",
+    "dir": "right"
+   },
+   {
+    "kind": "slide",
+    "id": "B",
+    "dir": "down"
+   },
+   {
+    "kind": "slide",
+    "id": "B",
+    "dir": "left"
+   },
+   {
+    "kind": "slide",
+    "id": "C",
+    "dir": "right"
+   },
+   {
+    "kind": "slide",
+    "id": "A",
+    "dir": "down"
+   },
+   {
+    "kind": "slide",
+    "id": "A",
+    "dir": "right"
+   },
+   {
+    "kind": "slide",
+    "id": "B",
+    "dir": "up"
+   }
+  ],
+  "level": {
+   "width": 6,
+   "height": 6,
+   "mask": [
+    "######",
+    "######",
+    "##..##",
+    "##..##",
+    "######",
+    "######"
+   ],
+   "walls": [
+    {
+     "x": 2,
+     "y": 0
+    },
+    {
+     "x": 4,
+     "y": 4
+    }
+   ],
+   "balls": [
+    {
+     "id": "A",
+     "color": "pink",
+     "x": 0,
+     "y": 2
+    },
+    {
+     "id": "B",
+     "color": "teal",
+     "x": 1,
+     "y": 4
+    },
+    {
+     "id": "C",
+     "color": "pink",
+     "x": 0,
+     "y": 4,
+     "hidden": true
+    }
+   ],
+   "gates": [
+    {
+     "color": "pink",
+     "side": "up",
+     "index": 2,
+     "depth": 4
+    },
+    {
+     "color": "teal",
+     "side": "up",
+     "index": 0
+    }
+   ],
+   "maxMoves": 9,
+   "trailLife": 2,
+   "trailClock": "owner"
+  }
+ },
+ {
+  "minMoves": 10,
+  "tier": "hard",
+  "concept": "KHÓ: thạch ẩn, bàn lục giác, phanh bắt buộc",
+  "needs": {
+   "brake": true,
+   "undo": false
+  },
+  "solution": [
+   {
+    "kind": "slide",
+    "id": "A",
+    "dir": "left"
+   },
+   {
+    "kind": "slide",
+    "id": "A",
+    "dir": "up"
+   },
+   {
+    "kind": "slide",
+    "id": "C",
+    "dir": "down"
+   },
+   {
+    "kind": "slide",
+    "id": "C",
+    "dir": "right"
+   },
+   {
+    "kind": "slide",
+    "id": "C",
+    "dir": "down"
+   },
+   {
+    "kind": "slide",
+    "id": "A",
+    "dir": "right"
+   },
+   {
+    "kind": "slide",
+    "id": "B",
+    "dir": "up"
+   },
+   {
+    "kind": "slide",
+    "id": "A",
+    "dir": "down"
+   },
+   {
+    "kind": "slide",
+    "id": "B",
+    "dir": "right"
+   },
+   {
+    "kind": "slide",
+    "id": "B",
+    "dir": "down"
+   }
+  ],
+  "level": {
+   "width": 7,
+   "height": 7,
+   "mask": [
+    "..###..",
+    ".#####.",
+    "#######",
+    "#######",
+    "#######",
+    ".#####.",
+    "..###.."
+   ],
+   "walls": [
+    {
+     "x": 6,
+     "y": 2
+    },
+    {
+     "x": 4,
+     "y": 5
+    },
+    {
+     "x": 4,
+     "y": 4
+    },
+    {
+     "x": 2,
+     "y": 1
+    }
+   ],
+   "balls": [
+    {
+     "id": "A",
+     "color": "pink",
+     "x": 2,
+     "y": 3
+    },
+    {
+     "id": "B",
+     "color": "teal",
+     "x": 2,
+     "y": 5,
+     "hidden": true
+    },
+    {
+     "id": "C",
+     "color": "pink",
+     "x": 1,
+     "y": 1
+    }
+   ],
+   "gates": [
+    {
+     "color": "pink",
+     "side": "down",
+     "index": 5,
+     "depth": 1
+    },
+    {
+     "color": "teal",
+     "side": "down",
+     "index": 6,
+     "depth": 2
+    }
+   ],
+   "maxMoves": 11,
+   "trailLife": 2,
+   "trailClock": "owner"
+  }
+ },
+ {
+  "minMoves": 4,
+  "tier": "easy",
+  "concept": "Ô mũi tên: giới thiệu",
+  "needs": {
+   "brake": false,
+   "undo": false
+  },
+  "introduces": "arrows",
+  "solution": [
+   {
+    "kind": "slide",
+    "id": "A",
+    "dir": "up"
+   },
+   {
+    "kind": "slide",
+    "id": "B",
+    "dir": "up"
+   },
+   {
+    "kind": "slide",
+    "id": "C",
+    "dir": "up"
+   },
+   {
+    "kind": "slide",
+    "id": "A",
+    "dir": "down"
+   }
+  ],
+  "level": {
+   "width": 5,
+   "height": 5,
+   "walls": [
+    {
+     "x": 4,
+     "y": 2
+    }
+   ],
+   "balls": [
+    {
+     "id": "A",
+     "color": "pink",
+     "x": 2,
+     "y": 4
+    },
+    {
+     "id": "B",
+     "color": "teal",
+     "x": 0,
+     "y": 1
+    },
+    {
+     "id": "C",
+     "color": "gold",
+     "x": 0,
+     "y": 4
+    }
+   ],
+   "gates": [
+    {
+     "color": "pink",
+     "side": "left",
+     "index": 4
+    },
+    {
+     "color": "teal",
+     "side": "left",
+     "index": 0
+    },
+    {
+     "color": "gold",
+     "side": "left",
+     "index": 3
+    }
+   ],
+   "maxMoves": 7,
+   "trailLife": 2,
+   "trailClock": "owner",
+   "arrows": [
+    {
+     "x": 2,
+     "y": 2,
+     "dir": "left"
+    }
+   ]
+  }
+ },
+ {
+  "minMoves": 6,
+  "tier": "medium",
+  "concept": "Hai ô mũi tên trên bàn lục giác",
+  "needs": {
+   "brake": false,
+   "undo": false
+  },
+  "solution": [
+   {
+    "kind": "slide",
+    "id": "A",
+    "dir": "left"
+   },
+   {
+    "kind": "slide",
+    "id": "B",
+    "dir": "up"
+   },
+   {
+    "kind": "slide",
+    "id": "B",
+    "dir": "right"
+   },
+   {
+    "kind": "slide",
+    "id": "B",
+    "dir": "left"
+   },
+   {
+    "kind": "slide",
+    "id": "C",
+    "dir": "left"
+   },
+   {
+    "kind": "slide",
+    "id": "C",
+    "dir": "up"
+   }
+  ],
+  "level": {
+   "width": 6,
+   "height": 6,
+   "mask": [
+    "..##..",
+    ".####.",
+    "######",
+    "######",
+    ".####.",
+    "..##.."
+   ],
+   "walls": [
+    {
+     "x": 5,
+     "y": 2
+    }
+   ],
+   "balls": [
+    {
+     "id": "A",
+     "color": "pink",
+     "x": 1,
+     "y": 2
+    },
+    {
+     "id": "B",
+     "color": "teal",
+     "x": 1,
+     "y": 4
+    },
+    {
+     "id": "C",
+     "color": "pink",
+     "x": 5,
+     "y": 3
+    }
+   ],
+   "gates": [
+    {
+     "color": "pink",
+     "side": "left",
+     "index": 2
+    },
+    {
+     "color": "teal",
+     "side": "down",
+     "index": 2
+    }
+   ],
+   "maxMoves": 8,
+   "trailLife": 2,
+   "trailClock": "owner",
+   "arrows": [
+    {
+     "x": 4,
+     "y": 4,
+     "dir": "right"
+    },
+    {
+     "x": 3,
+     "y": 1,
+     "dir": "down"
+    }
+   ]
+  }
+ },
+ {
+  "minMoves": 6,
+  "tier": "medium",
+  "concept": "Ô mũi tên trên bàn chữ L",
+  "needs": {
+   "brake": false,
+   "undo": false
+  },
+  "solution": [
+   {
+    "kind": "slide",
+    "id": "A",
+    "dir": "right"
+   },
+   {
+    "kind": "slide",
+    "id": "A",
+    "dir": "up"
+   },
+   {
+    "kind": "slide",
+    "id": "A",
+    "dir": "right"
+   },
+   {
+    "kind": "slide",
+    "id": "B",
+    "dir": "up"
+   },
+   {
+    "kind": "slide",
+    "id": "A",
+    "dir": "down"
+   },
+   {
+    "kind": "slide",
+    "id": "C",
+    "dir": "down"
+   }
+  ],
+  "level": {
+   "width": 6,
+   "height": 6,
+   "mask": [
+    "##....",
+    "##....",
+    "##....",
+    "##....",
+    "######",
+    "######"
+   ],
+   "walls": [
+    {
+     "x": 4,
+     "y": 5
+    }
+   ],
+   "balls": [
+    {
+     "id": "A",
+     "color": "pink",
+     "x": 2,
+     "y": 5
+    },
+    {
+     "id": "B",
+     "color": "teal",
+     "x": 0,
+     "y": 5
+    },
+    {
+     "id": "C",
+     "color": "gold",
+     "x": 0,
+     "y": 1
+    }
+   ],
+   "gates": [
+    {
+     "color": "pink",
+     "side": "down",
+     "index": 5
+    },
+    {
+     "color": "teal",
+     "side": "up",
+     "index": 2,
+     "depth": 4
+    },
+    {
+     "color": "gold",
+     "side": "left",
+     "index": 2
+    }
+   ],
+   "maxMoves": 8,
+   "trailLife": 2,
+   "trailClock": "owner",
+   "arrows": [
+    {
+     "x": 0,
+     "y": 4,
+     "dir": "right"
+    },
+    {
+     "x": 0,
+     "y": 2,
+     "dir": "left"
+    }
+   ]
+  }
+ },
+ {
+  "minMoves": 6,
+  "tier": "medium",
+  "concept": "Mũi tên cộng thạch một trục",
+  "needs": {
+   "brake": false,
+   "undo": false
+  },
+  "solution": [
+   {
+    "kind": "slide",
+    "id": "A",
+    "dir": "left"
+   },
+   {
+    "kind": "slide",
+    "id": "B",
+    "dir": "right"
+   },
+   {
+    "kind": "slide",
+    "id": "C",
+    "dir": "up"
+   },
+   {
+    "kind": "slide",
+    "id": "C",
+    "dir": "down"
+   },
+   {
+    "kind": "slide",
+    "id": "A",
+    "dir": "up"
+   },
+   {
+    "kind": "slide",
+    "id": "A",
+    "dir": "down"
+   }
+  ],
+  "level": {
+   "width": 6,
+   "height": 6,
+   "mask": [
+    "#.....",
+    "##....",
+    "###...",
+    "####..",
+    "#####.",
+    "######"
+   ],
+   "walls": [
+    {
+     "x": 0,
+     "y": 0
+    },
+    {
+     "x": 2,
+     "y": 2
+    },
+    {
+     "x": 0,
+     "y": 3
+    }
+   ],
+   "balls": [
+    {
+     "id": "A",
+     "color": "pink",
+     "x": 3,
+     "y": 3
+    },
+    {
+     "id": "B",
+     "color": "teal",
+     "x": 1,
+     "y": 5
+    },
+    {
+     "id": "C",
+     "color": "pink",
+     "x": 1,
+     "y": 2,
+     "axis": "v"
+    }
+   ],
+   "gates": [
+    {
+     "color": "pink",
+     "side": "left",
+     "index": 2
+    },
+    {
+     "color": "teal",
+     "side": "down",
+     "index": 5
+    }
+   ],
+   "maxMoves": 8,
+   "trailLife": 2,
+   "trailClock": "owner",
+   "arrows": [
+    {
+     "x": 1,
+     "y": 1,
+     "dir": "left"
+    }
+   ]
+  }
+ },
+ {
+  "minMoves": 9,
+  "tier": "super",
+  "concept": "SIÊU KHÓ: hai ô mũi tên, phanh bắt buộc",
+  "needs": {
+   "brake": true,
+   "undo": false
+  },
+  "solution": [
+   {
+    "kind": "slide",
+    "id": "A",
+    "dir": "right"
+   },
+   {
+    "kind": "slide",
+    "id": "C",
+    "dir": "right"
+   },
+   {
+    "kind": "slide",
+    "id": "B",
+    "dir": "down"
+   },
+   {
+    "kind": "slide",
+    "id": "B",
+    "dir": "left"
+   },
+   {
+    "kind": "slide",
+    "id": "C",
+    "dir": "up"
+   },
+   {
+    "kind": "undo",
+    "id": "A"
+   },
+   {
+    "kind": "slide",
+    "id": "A",
+    "dir": "down"
+   },
+   {
+    "kind": "slide",
+    "id": "A",
+    "dir": "up"
+   },
+   {
+    "kind": "slide",
+    "id": "C",
+    "dir": "left"
+   }
+  ],
+  "level": {
+   "width": 7,
+   "height": 7,
+   "mask": [
+    "..###..",
+    ".#####.",
+    "#######",
+    "#######",
+    "#######",
+    ".#####.",
+    "..###.."
+   ],
+   "walls": [
+    {
+     "x": 2,
+     "y": 0
+    },
+    {
+     "x": 6,
+     "y": 2
+    },
+    {
+     "x": 2,
+     "y": 4
+    },
+    {
+     "x": 2,
+     "y": 6
+    }
+   ],
+   "balls": [
+    {
+     "id": "A",
+     "color": "pink",
+     "x": 2,
+     "y": 1
+    },
+    {
+     "id": "B",
+     "color": "teal",
+     "x": 4,
+     "y": 3
+    },
+    {
+     "id": "C",
+     "color": "gold",
+     "x": 3,
+     "y": 6
+    }
+   ],
+   "gates": [
+    {
+     "color": "pink",
+     "side": "up",
+     "index": 3
+    },
+    {
+     "color": "teal",
+     "side": "down",
+     "index": 1,
+     "depth": 1
+    },
+    {
+     "color": "gold",
+     "side": "left",
+     "index": 2
+    }
+   ],
+   "maxMoves": 10,
+   "trailLife": 2,
+   "trailClock": "owner",
+   "arrows": [
+    {
+     "x": 1,
+     "y": 3,
+     "dir": "right"
+    },
+    {
+     "x": 2,
+     "y": 3,
+     "dir": "right"
+    }
+   ]
+  }
+ },
+ {
+  "minMoves": 5,
+  "tier": "easy",
+  "concept": "Cổng dịch chuyển: giới thiệu",
+  "needs": {
+   "brake": false,
+   "undo": false
+  },
+  "introduces": "portals",
+  "solution": [
+   {
+    "kind": "slide",
+    "id": "A",
+    "dir": "down"
+   },
+   {
+    "kind": "slide",
+    "id": "B",
+    "dir": "right"
+   },
+   {
+    "kind": "slide",
+    "id": "C",
+    "dir": "left"
+   },
+   {
+    "kind": "slide",
+    "id": "C",
+    "dir": "up"
+   },
+   {
+    "kind": "slide",
+    "id": "C",
+    "dir": "left"
+   }
+  ],
+  "level": {
+   "width": 5,
+   "height": 5,
+   "walls": [
+    {
+     "x": 3,
+     "y": 1
+    },
+    {
+     "x": 0,
+     "y": 3
+    }
+   ],
+   "balls": [
+    {
+     "id": "A",
+     "color": "pink",
+     "x": 3,
+     "y": 2
+    },
+    {
+     "id": "B",
+     "color": "teal",
+     "x": 0,
+     "y": 0
+    },
+    {
+     "id": "C",
+     "color": "gold",
+     "x": 4,
+     "y": 3
+    }
+   ],
+   "gates": [
+    {
+     "color": "pink",
+     "side": "down",
+     "index": 1
+    },
+    {
+     "color": "teal",
+     "side": "right",
+     "index": 0
+    },
+    {
+     "color": "gold",
+     "side": "down",
+     "index": 0
+    }
+   ],
+   "maxMoves": 8,
+   "trailLife": 2,
+   "trailClock": "owner",
+   "portals": [
+    {
+     "a": {
+      "x": 1,
+      "y": 1
+     },
+     "b": {
+      "x": 3,
+      "y": 4
+     }
+    }
+   ]
+  }
+ },
+ {
+  "minMoves": 5,
+  "tier": "medium",
+  "concept": "Cổng dịch chuyển trên bàn chữ nhật",
+  "needs": {
+   "brake": false,
+   "undo": false
+  },
+  "solution": [
+   {
+    "kind": "slide",
+    "id": "A",
+    "dir": "down"
+   },
+   {
+    "kind": "slide",
+    "id": "A",
+    "dir": "right"
+   },
+   {
+    "kind": "slide",
+    "id": "A",
+    "dir": "down"
+   },
+   {
+    "kind": "slide",
+    "id": "B",
+    "dir": "right"
+   },
+   {
+    "kind": "slide",
+    "id": "C",
+    "dir": "down"
+   }
+  ],
+  "level": {
+   "width": 6,
+   "height": 5,
+   "walls": [
+    {
+     "x": 4,
+     "y": 2
+    }
+   ],
+   "balls": [
+    {
+     "id": "A",
+     "color": "pink",
+     "x": 1,
+     "y": 2
+    },
+    {
+     "id": "B",
+     "color": "teal",
+     "x": 1,
+     "y": 4
+    },
+    {
+     "id": "C",
+     "color": "pink",
+     "x": 3,
+     "y": 3
+    }
+   ],
+   "gates": [
+    {
+     "color": "pink",
+     "side": "down",
+     "index": 2
+    },
+    {
+     "color": "teal",
+     "side": "right",
+     "index": 1
+    }
+   ],
+   "maxMoves": 7,
+   "trailLife": 2,
+   "trailClock": "owner",
+   "portals": [
+    {
+     "a": {
+      "x": 2,
+      "y": 1
+     },
+     "b": {
+      "x": 3,
+      "y": 4
+     }
+    }
+   ]
+  }
+ },
+ {
+  "minMoves": 7,
+  "tier": "medium",
+  "concept": "Cổng dịch chuyển cộng phanh",
+  "needs": {
+   "brake": true,
+   "undo": false
+  },
+  "solution": [
+   {
+    "kind": "slide",
+    "id": "C",
+    "dir": "left"
+   },
+   {
+    "kind": "slide",
+    "id": "C",
+    "dir": "up"
+   },
+   {
+    "kind": "slide",
+    "id": "B",
+    "dir": "left"
+   },
+   {
+    "kind": "slide",
+    "id": "B",
+    "dir": "up"
+   },
+   {
+    "kind": "slide",
+    "id": "C",
+    "dir": "right"
+   },
+   {
+    "kind": "slide",
+    "id": "A",
+    "dir": "right"
+   },
+   {
+    "kind": "slide",
+    "id": "B",
+    "dir": "left"
+   }
+  ],
+  "level": {
+   "width": 6,
+   "height": 6,
+   "mask": [
+    "##....",
+    "##....",
+    "##....",
+    "##....",
+    "######",
+    "######"
+   ],
+   "walls": [
+    {
+     "x": 3,
+     "y": 4
+    }
+   ],
+   "balls": [
+    {
+     "id": "A",
+     "color": "pink",
+     "x": 3,
+     "y": 5
+    },
+    {
+     "id": "B",
+     "color": "teal",
+     "x": 2,
+     "y": 4
+    },
+    {
+     "id": "C",
+     "color": "gold",
+     "x": 2,
+     "y": 5
+    }
+   ],
+   "gates": [
+    {
+     "color": "pink",
+     "side": "left",
+     "index": 1
+    },
+    {
+     "color": "teal",
+     "side": "left",
+     "index": 0
+    },
+    {
+     "color": "gold",
+     "side": "up",
+     "index": 5,
+     "depth": 4
+    }
+   ],
+   "maxMoves": 9,
+   "trailLife": 2,
+   "trailClock": "owner",
+   "portals": [
+    {
+     "a": {
+      "x": 0,
+      "y": 1
+     },
+     "b": {
+      "x": 4,
+      "y": 5
+     }
+    }
+   ]
+  }
+ },
+ {
+  "minMoves": 7,
+  "tier": "medium",
+  "concept": "Cổng dịch chuyển cộng thạch ẩn",
+  "needs": {
+   "brake": false,
+   "undo": false
+  },
+  "solution": [
+   {
+    "kind": "slide",
+    "id": "A",
+    "dir": "up"
+   },
+   {
+    "kind": "slide",
+    "id": "A",
+    "dir": "left"
+   },
+   {
+    "kind": "slide",
+    "id": "B",
+    "dir": "up"
+   },
+   {
+    "kind": "slide",
+    "id": "C",
+    "dir": "up"
+   },
+   {
+    "kind": "slide",
+    "id": "C",
+    "dir": "left"
+   },
+   {
+    "kind": "slide",
+    "id": "B",
+    "dir": "left"
+   },
+   {
+    "kind": "slide",
+    "id": "B",
+    "dir": "up"
+   }
+  ],
+  "level": {
+   "width": 7,
+   "height": 7,
+   "mask": [
+    "#######",
+    ".#####.",
+    "..###..",
+    "...#...",
+    "..###..",
+    ".#####.",
+    "#######"
+   ],
+   "walls": [
+    {
+     "x": 2,
+     "y": 6
+    },
+    {
+     "x": 3,
+     "y": 6
+    },
+    {
+     "x": 1,
+     "y": 5
+    }
+   ],
+   "balls": [
+    {
+     "id": "A",
+     "color": "pink",
+     "x": 1,
+     "y": 1,
+     "hidden": true
+    },
+    {
+     "id": "B",
+     "color": "teal",
+     "x": 5,
+     "y": 6
+    },
+    {
+     "id": "C",
+     "color": "pink",
+     "x": 2,
+     "y": 5
+    }
+   ],
+   "gates": [
+    {
+     "color": "pink",
+     "side": "left",
+     "index": 0
+    },
+    {
+     "color": "teal",
+     "side": "up",
+     "index": 5
+    }
+   ],
+   "maxMoves": 9,
+   "trailLife": 2,
+   "trailClock": "owner",
+   "portals": [
+    {
+     "a": {
+      "x": 2,
+      "y": 4
+     },
+     "b": {
+      "x": 5,
+      "y": 0
+     }
+    }
+   ]
+  }
+ },
+ {
+  "minMoves": 9,
+  "tier": "hard",
+  "concept": "KHÓ: cổng dịch chuyển cộng mũi tên, phanh bắt buộc",
+  "needs": {
+   "brake": true,
+   "undo": false
+  },
+  "solution": [
+   {
+    "kind": "slide",
+    "id": "A",
+    "dir": "down"
+   },
+   {
+    "kind": "slide",
+    "id": "B",
+    "dir": "down"
+   },
+   {
+    "kind": "slide",
+    "id": "B",
+    "dir": "right"
+   },
+   {
+    "kind": "slide",
+    "id": "C",
+    "dir": "down"
+   },
+   {
+    "kind": "slide",
+    "id": "C",
+    "dir": "left"
+   },
+   {
+    "kind": "slide",
+    "id": "C",
+    "dir": "down"
+   },
+   {
+    "kind": "slide",
+    "id": "B",
+    "dir": "up"
+   },
+   {
+    "kind": "slide",
+    "id": "B",
+    "dir": "right"
+   },
+   {
+    "kind": "slide",
+    "id": "C",
+    "dir": "left"
+   }
+  ],
+  "level": {
+   "width": 7,
+   "height": 7,
+   "mask": [
+    "..###..",
+    ".#####.",
+    "#######",
+    "#######",
+    "#######",
+    ".#####.",
+    "..###.."
+   ],
+   "walls": [
+    {
+     "x": 3,
+     "y": 0
+    },
+    {
+     "x": 0,
+     "y": 2
+    },
+    {
+     "x": 5,
+     "y": 3
+    },
+    {
+     "x": 5,
+     "y": 2
+    }
+   ],
+   "balls": [
+    {
+     "id": "A",
+     "color": "pink",
+     "x": 2,
+     "y": 1
+    },
+    {
+     "id": "B",
+     "color": "teal",
+     "x": 1,
+     "y": 1
+    },
+    {
+     "id": "C",
+     "color": "pink",
+     "x": 6,
+     "y": 3
+    }
+   ],
+   "gates": [
+    {
+     "color": "pink",
+     "side": "left",
+     "index": 5,
+     "depth": 1
+    },
+    {
+     "color": "teal",
+     "side": "right",
+     "index": 5,
+     "depth": 1
+    }
+   ],
+   "maxMoves": 10,
+   "trailLife": 2,
+   "trailClock": "owner",
+   "arrows": [
+    {
+     "x": 4,
+     "y": 5,
+     "dir": "left"
+    }
+   ],
+   "portals": [
+    {
+     "a": {
+      "x": 2,
+      "y": 3
+     },
+     "b": {
+      "x": 1,
+      "y": 4
+     }
+    }
+   ]
+  }
+ },
+ {
+  "minMoves": 4,
+  "tier": "easy",
+  "concept": "Ô dính: giới thiệu",
+  "needs": {
+   "brake": false,
+   "undo": false
+  },
+  "introduces": "sticky",
+  "solution": [
+   {
+    "kind": "slide",
+    "id": "B",
+    "dir": "right"
+   },
+   {
+    "kind": "slide",
+    "id": "B",
+    "dir": "up"
+   },
+   {
+    "kind": "slide",
+    "id": "A",
+    "dir": "down"
+   },
+   {
+    "kind": "slide",
+    "id": "C",
+    "dir": "up"
+   }
+  ],
+  "level": {
+   "width": 5,
+   "height": 5,
+   "walls": [
+    {
+     "x": 3,
+     "y": 4
+    },
+    {
+     "x": 4,
+     "y": 0
+    }
+   ],
+   "balls": [
+    {
+     "id": "A",
+     "color": "pink",
+     "x": 0,
+     "y": 0
+    },
+    {
+     "id": "B",
+     "color": "teal",
+     "x": 0,
+     "y": 2
+    },
+    {
+     "id": "C",
+     "color": "gold",
+     "x": 4,
+     "y": 4
+    }
+   ],
+   "gates": [
+    {
+     "color": "pink",
+     "side": "left",
+     "index": 4
+    },
+    {
+     "color": "teal",
+     "side": "up",
+     "index": 2
+    },
+    {
+     "color": "gold",
+     "side": "right",
+     "index": 1
+    }
+   ],
+   "maxMoves": 7,
+   "trailLife": 2,
+   "trailClock": "owner",
+   "sticky": [
+    {
+     "x": 2,
+     "y": 2
+    }
+   ]
+  }
+ },
+ {
+  "minMoves": 6,
+  "tier": "medium",
+  "concept": "Hai ô dính trên bàn tam giác",
+  "needs": {
+   "brake": false,
+   "undo": false
+  },
+  "solution": [
+   {
+    "kind": "slide",
+    "id": "A",
+    "dir": "down"
+   },
+   {
+    "kind": "slide",
+    "id": "A",
+    "dir": "left"
+   },
+   {
+    "kind": "slide",
+    "id": "B",
+    "dir": "up"
+   },
+   {
+    "kind": "slide",
+    "id": "B",
+    "dir": "right"
+   },
+   {
+    "kind": "slide",
+    "id": "B",
+    "dir": "up"
+   },
+   {
+    "kind": "slide",
+    "id": "C",
+    "dir": "up"
+   }
+  ],
+  "level": {
+   "width": 7,
+   "height": 4,
+   "mask": [
+    "...#...",
+    "..###..",
+    ".#####.",
+    "#######"
+   ],
+   "walls": [
+    {
+     "x": 6,
+     "y": 3
+    },
+    {
+     "x": 5,
+     "y": 3
+    },
+    {
+     "x": 3,
+     "y": 2
+    }
+   ],
+   "balls": [
+    {
+     "id": "A",
+     "color": "pink",
+     "x": 2,
+     "y": 1
+    },
+    {
+     "id": "B",
+     "color": "teal",
+     "x": 2,
+     "y": 3
+    },
+    {
+     "id": "C",
+     "color": "pink",
+     "x": 1,
+     "y": 3
+    }
+   ],
+   "gates": [
+    {
+     "color": "pink",
+     "side": "left",
+     "index": 2,
+     "depth": 1
+    },
+    {
+     "color": "teal",
+     "side": "right",
+     "index": 0,
+     "depth": 3
+    }
+   ],
+   "maxMoves": 8,
+   "trailLife": 2,
+   "trailClock": "owner",
+   "sticky": [
+    {
+     "x": 3,
+     "y": 1
+    },
+    {
+     "x": 3,
+     "y": 3
+    }
+   ]
+  }
+ },
+ {
+  "minMoves": 6,
+  "tier": "medium",
+  "concept": "Ô dính cộng cổng dịch chuyển",
+  "needs": {
+   "brake": false,
+   "undo": false
+  },
+  "solution": [
+   {
+    "kind": "slide",
+    "id": "A",
+    "dir": "left"
+   },
+   {
+    "kind": "slide",
+    "id": "A",
+    "dir": "up"
+   },
+   {
+    "kind": "slide",
+    "id": "B",
+    "dir": "down"
+   },
+   {
+    "kind": "slide",
+    "id": "C",
+    "dir": "up"
+   },
+   {
+    "kind": "slide",
+    "id": "C",
+    "dir": "up"
+   },
+   {
+    "kind": "slide",
+    "id": "C",
+    "dir": "right"
+   }
+  ],
+  "level": {
+   "width": 6,
+   "height": 6,
+   "mask": [
+    "######",
+    "######",
+    "##..##",
+    "##..##",
+    "######",
+    "######"
+   ],
+   "walls": [
+    {
+     "x": 1,
+     "y": 3
+    },
+    {
+     "x": 5,
+     "y": 5
+    },
+    {
+     "x": 3,
+     "y": 0
+    }
+   ],
+   "balls": [
+    {
+     "id": "A",
+     "color": "pink",
+     "x": 1,
+     "y": 2
+    },
+    {
+     "id": "B",
+     "color": "teal",
+     "x": 4,
+     "y": 2
+    },
+    {
+     "id": "C",
+     "color": "gold",
+     "x": 0,
+     "y": 5
+    }
+   ],
+   "gates": [
+    {
+     "color": "pink",
+     "side": "left",
+     "index": 1
+    },
+    {
+     "color": "teal",
+     "side": "down",
+     "index": 4
+    },
+    {
+     "color": "gold",
+     "side": "right",
+     "index": 4
+    }
+   ],
+   "maxMoves": 8,
+   "trailLife": 2,
+   "trailClock": "owner",
+   "sticky": [
+    {
+     "x": 0,
+     "y": 1
+    }
+   ],
+   "portals": [
+    {
+     "a": {
+      "x": 1,
+      "y": 5
+     },
+     "b": {
+      "x": 0,
+      "y": 0
+     }
+    }
+   ]
+  }
+ },
+ {
+  "minMoves": 6,
+  "tier": "medium",
+  "concept": "Ô dính cộng mũi tên",
+  "needs": {
+   "brake": true,
+   "undo": false
+  },
+  "solution": [
+   {
+    "kind": "slide",
+    "id": "A",
+    "dir": "left"
+   },
+   {
+    "kind": "slide",
+    "id": "C",
+    "dir": "left"
+   },
+   {
+    "kind": "slide",
+    "id": "B",
+    "dir": "down"
+   },
+   {
+    "kind": "slide",
+    "id": "B",
+    "dir": "right"
+   },
+   {
+    "kind": "slide",
+    "id": "A",
+    "dir": "up"
+   },
+   {
+    "kind": "slide",
+    "id": "A",
+    "dir": "left"
+   }
+  ],
+  "level": {
+   "width": 6,
+   "height": 6,
+   "mask": [
+    "..##..",
+    ".####.",
+    "######",
+    "######",
+    ".####.",
+    "..##.."
+   ],
+   "walls": [
+    {
+     "x": 3,
+     "y": 0
+    }
+   ],
+   "balls": [
+    {
+     "id": "A",
+     "color": "pink",
+     "x": 3,
+     "y": 3
+    },
+    {
+     "id": "B",
+     "color": "teal",
+     "x": 2,
+     "y": 0
+    },
+    {
+     "id": "C",
+     "color": "pink",
+     "x": 4,
+     "y": 2
+    }
+   ],
+   "gates": [
+    {
+     "color": "pink",
+     "side": "left",
+     "index": 2
+    },
+    {
+     "color": "teal",
+     "side": "up",
+     "index": 5,
+     "depth": 2
+    }
+   ],
+   "maxMoves": 8,
+   "trailLife": 2,
+   "trailClock": "owner",
+   "sticky": [
+    {
+     "x": 5,
+     "y": 3
+    }
+   ],
+   "arrows": [
+    {
+     "x": 0,
+     "y": 3,
+     "dir": "right"
+    }
+   ]
+  }
+ },
+ {
+  "minMoves": 9,
+  "tier": "super",
+  "concept": "SIÊU KHÓ: ô dính, cổng dịch chuyển, phanh bắt buộc",
+  "needs": {
+   "brake": true,
+   "undo": false
+  },
+  "solution": [
+   {
+    "kind": "slide",
+    "id": "C",
+    "dir": "up"
+   },
+   {
+    "kind": "slide",
+    "id": "C",
+    "dir": "right"
+   },
+   {
+    "kind": "slide",
+    "id": "C",
+    "dir": "right"
+   },
+   {
+    "kind": "slide",
+    "id": "C",
+    "dir": "down"
+   },
+   {
+    "kind": "slide",
+    "id": "A",
+    "dir": "right"
+   },
+   {
+    "kind": "slide",
+    "id": "A",
+    "dir": "down"
+   },
+   {
+    "kind": "slide",
+    "id": "A",
+    "dir": "right"
+   },
+   {
+    "kind": "slide",
+    "id": "B",
+    "dir": "up"
+   },
+   {
+    "kind": "slide",
+    "id": "C",
+    "dir": "left"
+   }
+  ],
+  "level": {
+   "width": 7,
+   "height": 7,
+   "mask": [
+    "..###..",
+    ".#####.",
+    "#######",
+    "#######",
+    "#######",
+    ".#####.",
+    "..###.."
+   ],
+   "walls": [
+    {
+     "x": 1,
+     "y": 3
+    },
+    {
+     "x": 4,
+     "y": 1
+    },
+    {
+     "x": 0,
+     "y": 4
+    }
+   ],
+   "balls": [
+    {
+     "id": "A",
+     "color": "pink",
+     "x": 0,
+     "y": 2
+    },
+    {
+     "id": "B",
+     "color": "teal",
+     "x": 0,
+     "y": 3
+    },
+    {
+     "id": "C",
+     "color": "gold",
+     "x": 1,
+     "y": 2
+    }
+   ],
+   "gates": [
+    {
+     "color": "pink",
+     "side": "down",
+     "index": 3
+    },
+    {
+     "color": "teal",
+     "side": "up",
+     "index": 0,
+     "depth": 2
+    },
+    {
+     "color": "gold",
+     "side": "left",
+     "index": 6,
+     "depth": 2
+    }
+   ],
+   "maxMoves": 10,
+   "trailLife": 2,
+   "trailClock": "owner",
+   "sticky": [
+    {
+     "x": 2,
+     "y": 1
+    }
+   ],
+   "portals": [
+    {
+     "a": {
+      "x": 4,
+      "y": 5
+     },
+     "b": {
+      "x": 3,
+      "y": 5
+     }
+    }
+   ]
+  }
+ },
+ {
+  "minMoves": 5,
+  "tier": "easy",
+  "concept": "Hồi sức: bàn chữ nhật, một ô dính",
+  "needs": {
+   "brake": false,
+   "undo": false
+  },
+  "solution": [
+   {
+    "kind": "slide",
+    "id": "A",
+    "dir": "down"
+   },
+   {
+    "kind": "slide",
+    "id": "A",
+    "dir": "right"
+   },
+   {
+    "kind": "slide",
+    "id": "B",
+    "dir": "down"
+   },
+   {
+    "kind": "slide",
+    "id": "C",
+    "dir": "down"
+   },
+   {
+    "kind": "slide",
+    "id": "C",
+    "dir": "right"
+   }
+  ],
+  "level": {
+   "width": 6,
+   "height": 5,
+   "walls": [
+    {
+     "x": 0,
+     "y": 4
+    }
+   ],
+   "balls": [
+    {
+     "id": "A",
+     "color": "pink",
+     "x": 1,
+     "y": 2
+    },
+    {
+     "id": "B",
+     "color": "teal",
+     "x": 5,
+     "y": 0
+    },
+    {
+     "id": "C",
+     "color": "pink",
+     "x": 2,
+     "y": 1
+    }
+   ],
+   "gates": [
+    {
+     "color": "pink",
+     "side": "down",
+     "index": 4
+    },
+    {
+     "color": "teal",
+     "side": "down",
+     "index": 5
+    }
+   ],
+   "maxMoves": 8,
+   "trailLife": 2,
+   "trailClock": "owner",
+   "sticky": [
+    {
+     "x": 4,
+     "y": 4
+    }
+   ]
+  }
+ },
+ {
+  "minMoves": 7,
+  "tier": "medium",
+  "concept": "Một trục cộng mũi tên",
+  "needs": {
+   "brake": false,
+   "undo": false
+  },
+  "solution": [
+   {
+    "kind": "slide",
+    "id": "A",
+    "dir": "down"
+   },
+   {
+    "kind": "slide",
+    "id": "B",
+    "dir": "down"
+   },
+   {
+    "kind": "slide",
+    "id": "C",
+    "dir": "down"
+   },
+   {
+    "kind": "slide",
+    "id": "B",
+    "dir": "right"
+   },
+   {
+    "kind": "slide",
+    "id": "B",
+    "dir": "up"
+   },
+   {
+    "kind": "slide",
+    "id": "B",
+    "dir": "right"
+   },
+   {
+    "kind": "slide",
+    "id": "B",
+    "dir": "right"
+   }
+  ],
+  "level": {
+   "width": 7,
+   "height": 7,
+   "mask": [
+    "...#...",
+    "..###..",
+    ".#####.",
+    "#######",
+    ".#####.",
+    "..###..",
+    "...#..."
+   ],
+   "walls": [
+    {
+     "x": 4,
+     "y": 4
+    },
+    {
+     "x": 3,
+     "y": 4
+    },
+    {
+     "x": 4,
+     "y": 1
+    }
+   ],
+   "balls": [
+    {
+     "id": "A",
+     "color": "pink",
+     "x": 2,
+     "y": 4,
+     "axis": "v"
+    },
+    {
+     "id": "B",
+     "color": "teal",
+     "x": 1,
+     "y": 2
+    },
+    {
+     "id": "C",
+     "color": "gold",
+     "x": 2,
+     "y": 3
+    }
+   ],
+   "gates": [
+    {
+     "color": "pink",
+     "side": "down",
+     "index": 2,
+     "depth": 1
+    },
+    {
+     "color": "teal",
+     "side": "down",
+     "index": 6,
+     "depth": 3
+    },
+    {
+     "color": "gold",
+     "side": "left",
+     "index": 5,
+     "depth": 2
+    }
+   ],
+   "maxMoves": 9,
+   "trailLife": 2,
+   "trailClock": "owner",
+   "arrows": [
+    {
+     "x": 3,
+     "y": 1,
+     "dir": "down"
+    }
+   ]
+  }
+ },
+ {
+  "minMoves": 6,
+  "tier": "medium",
+  "concept": "Thạch ẩn cộng cổng dịch chuyển",
+  "needs": {
+   "brake": false,
+   "undo": false
+  },
+  "solution": [
+   {
+    "kind": "slide",
+    "id": "A",
+    "dir": "right"
+   },
+   {
+    "kind": "slide",
+    "id": "A",
+    "dir": "down"
+   },
+   {
+    "kind": "slide",
+    "id": "A",
+    "dir": "right"
+   },
+   {
+    "kind": "slide",
+    "id": "B",
+    "dir": "up"
+   },
+   {
+    "kind": "slide",
+    "id": "C",
+    "dir": "down"
+   },
+   {
+    "kind": "slide",
+    "id": "C",
+    "dir": "right"
+   }
+  ],
+  "level": {
+   "width": 6,
+   "height": 6,
+   "mask": [
+    "#.....",
+    "##....",
+    "###...",
+    "####..",
+    "#####.",
+    "######"
+   ],
+   "walls": [
+    {
+     "x": 2,
+     "y": 4
+    },
+    {
+     "x": 0,
+     "y": 0
+    },
+    {
+     "x": 0,
+     "y": 5
+    }
+   ],
+   "balls": [
+    {
+     "id": "A",
+     "color": "pink",
+     "x": 0,
+     "y": 2
+    },
+    {
+     "id": "B",
+     "color": "teal",
+     "x": 0,
+     "y": 4,
+     "hidden": true
+    },
+    {
+     "id": "C",
+     "color": "pink",
+     "x": 1,
+     "y": 4
+    }
+   ],
+   "gates": [
+    {
+     "color": "pink",
+     "side": "up",
+     "index": 5,
+     "depth": 5
+    },
+    {
+     "color": "teal",
+     "side": "left",
+     "index": 1
+    }
+   ],
+   "maxMoves": 8,
+   "trailLife": 2,
+   "trailClock": "owner",
+   "portals": [
+    {
+     "a": {
+      "x": 1,
+      "y": 2
+     },
+     "b": {
+      "x": 3,
+      "y": 4
+     }
+    }
+   ]
+  }
+ },
+ {
+  "minMoves": 8,
+  "tier": "medium",
+  "concept": "Ô dính cộng mũi tên trên bàn đồng hồ cát",
+  "needs": {
+   "brake": false,
+   "undo": false
+  },
+  "solution": [
+   {
+    "kind": "slide",
+    "id": "A",
+    "dir": "left"
+   },
+   {
+    "kind": "slide",
+    "id": "B",
+    "dir": "right"
+   },
+   {
+    "kind": "slide",
+    "id": "B",
+    "dir": "down"
+   },
+   {
+    "kind": "slide",
+    "id": "B",
+    "dir": "right"
+   },
+   {
+    "kind": "slide",
+    "id": "B",
+    "dir": "up"
+   },
+   {
+    "kind": "slide",
+    "id": "C",
+    "dir": "left"
+   },
+   {
+    "kind": "slide",
+    "id": "C",
+    "dir": "up"
+   },
+   {
+    "kind": "slide",
+    "id": "C",
+    "dir": "left"
+   }
+  ],
+  "level": {
+   "width": 7,
+   "height": 7,
+   "mask": [
+    "#######",
+    ".#####.",
+    "..###..",
+    "...#...",
+    "..###..",
+    ".#####.",
+    "#######"
+   ],
+   "walls": [
+    {
+     "x": 2,
+     "y": 6
+    },
+    {
+     "x": 1,
+     "y": 6
+    }
+   ],
+   "balls": [
+    {
+     "id": "A",
+     "color": "pink",
+     "x": 1,
+     "y": 0
+    },
+    {
+     "id": "B",
+     "color": "teal",
+     "x": 2,
+     "y": 0
+    },
+    {
+     "id": "C",
+     "color": "pink",
+     "x": 6,
+     "y": 6
+    }
+   ],
+   "gates": [
+    {
+     "color": "pink",
+     "side": "up",
+     "index": 0
+    },
+    {
+     "color": "teal",
+     "side": "up",
+     "index": 5
+    }
+   ],
+   "maxMoves": 10,
+   "trailLife": 2,
+   "trailClock": "owner",
+   "sticky": [
+    {
+     "x": 3,
+     "y": 0
+    }
+   ],
+   "arrows": [
+    {
+     "x": 3,
+     "y": 2,
+     "dir": "up"
+    }
+   ]
+  }
+ },
+ {
+  "minMoves": 10,
+  "tier": "hard",
+  "concept": "KHÓ: dịch chuyển, mũi tên và ô dính, phanh bắt buộc",
+  "needs": {
+   "brake": true,
+   "undo": false
+  },
+  "solution": [
+   {
+    "kind": "slide",
+    "id": "A",
+    "dir": "up"
+   },
+   {
+    "kind": "slide",
+    "id": "B",
+    "dir": "up"
+   },
+   {
+    "kind": "slide",
+    "id": "B",
+    "dir": "left"
+   },
+   {
+    "kind": "slide",
+    "id": "B",
+    "dir": "up"
+   },
+   {
+    "kind": "slide",
+    "id": "A",
+    "dir": "left"
+   },
+   {
+    "kind": "undo",
+    "id": "B"
+   },
+   {
+    "kind": "slide",
+    "id": "B",
+    "dir": "left"
+   },
+   {
+    "kind": "slide",
+    "id": "B",
+    "dir": "down"
+   },
+   {
+    "kind": "slide",
+    "id": "B",
+    "dir": "left"
+   },
+   {
+    "kind": "slide",
+    "id": "C",
+    "dir": "right"
+   }
+  ],
+  "level": {
+   "width": 7,
+   "height": 7,
+   "mask": [
+    "..###..",
+    ".#####.",
+    "#######",
+    "#######",
+    "#######",
+    ".#####.",
+    "..###.."
+   ],
+   "walls": [
+    {
+     "x": 1,
+     "y": 5
+    },
+    {
+     "x": 0,
+     "y": 3
+    },
+    {
+     "x": 2,
+     "y": 4
+    },
+    {
+     "x": 3,
+     "y": 4
+    }
+   ],
+   "balls": [
+    {
+     "id": "A",
+     "color": "pink",
+     "x": 6,
+     "y": 4
+    },
+    {
+     "id": "B",
+     "color": "teal",
+     "x": 5,
+     "y": 2
+    },
+    {
+     "id": "C",
+     "color": "gold",
+     "x": 2,
+     "y": 3
+    }
+   ],
+   "gates": [
+    {
+     "color": "pink",
+     "side": "up",
+     "index": 4
+    },
+    {
+     "color": "teal",
+     "side": "down",
+     "index": 0,
+     "depth": 2
+    },
+    {
+     "color": "gold",
+     "side": "right",
+     "index": 3
+    }
+   ],
+   "maxMoves": 11,
+   "trailLife": 2,
+   "trailClock": "owner",
+   "sticky": [
+    {
+     "x": 3,
+     "y": 1
+    }
+   ],
+   "arrows": [
+    {
+     "x": 0,
+     "y": 4,
+     "dir": "right"
+    }
+   ],
+   "portals": [
+    {
+     "a": {
+      "x": 2,
+      "y": 2
+     },
+     "b": {
+      "x": 4,
+      "y": 0
+     }
+    }
+   ]
+  }
+ },
+ {
+  "minMoves": 7,
+  "tier": "medium",
+  "concept": "Một trục, cổng dịch chuyển, thạch ẩn",
+  "needs": {
+   "brake": false,
+   "undo": false
+  },
+  "solution": [
+   {
+    "kind": "slide",
+    "id": "A",
+    "dir": "down"
+   },
+   {
+    "kind": "slide",
+    "id": "A",
+    "dir": "up"
+   },
+   {
+    "kind": "slide",
+    "id": "B",
+    "dir": "up"
+   },
+   {
+    "kind": "slide",
+    "id": "C",
+    "dir": "left"
+   },
+   {
+    "kind": "slide",
+    "id": "C",
+    "dir": "up"
+   },
+   {
+    "kind": "slide",
+    "id": "B",
+    "dir": "right"
+   },
+   {
+    "kind": "slide",
+    "id": "B",
+    "dir": "down"
+   }
+  ],
+  "level": {
+   "width": 7,
+   "height": 7,
+   "mask": [
+    "##.....",
+    "##.....",
+    "##.....",
+    "##.....",
+    "##.....",
+    "#######",
+    "#######"
+   ],
+   "walls": [
+    {
+     "x": 0,
+     "y": 4
+    },
+    {
+     "x": 5,
+     "y": 6
+    },
+    {
+     "x": 4,
+     "y": 5
+    },
+    {
+     "x": 3,
+     "y": 5
+    }
+   ],
+   "balls": [
+    {
+     "id": "A",
+     "color": "pink",
+     "x": 1,
+     "y": 0,
+     "axis": "v"
+    },
+    {
+     "id": "B",
+     "color": "teal",
+     "x": 0,
+     "y": 6
+    },
+    {
+     "id": "C",
+     "color": "pink",
+     "x": 3,
+     "y": 6,
+     "hidden": true
+    }
+   ],
+   "gates": [
+    {
+     "color": "pink",
+     "side": "up",
+     "index": 0
+    },
+    {
+     "color": "teal",
+     "side": "down",
+     "index": 2
+    }
+   ],
+   "maxMoves": 9,
+   "trailLife": 2,
+   "trailClock": "owner",
+   "portals": [
+    {
+     "a": {
+      "x": 1,
+      "y": 1
+     },
+     "b": {
+      "x": 0,
+      "y": 3
+     }
+    }
+   ]
+  }
+ },
+ {
+  "minMoves": 8,
+  "tier": "medium",
+  "concept": "Mũi tên cộng ô dính, bàn vòng",
+  "needs": {
+   "brake": true,
+   "undo": false
+  },
+  "solution": [
+   {
+    "kind": "slide",
+    "id": "A",
+    "dir": "up"
+   },
+   {
+    "kind": "slide",
+    "id": "C",
+    "dir": "right"
+   },
+   {
+    "kind": "slide",
+    "id": "C",
+    "dir": "up"
+   },
+   {
+    "kind": "slide",
+    "id": "B",
+    "dir": "left"
+   },
+   {
+    "kind": "slide",
+    "id": "A",
+    "dir": "left"
+   },
+   {
+    "kind": "slide",
+    "id": "C",
+    "dir": "right"
+   },
+   {
+    "kind": "slide",
+    "id": "B",
+    "dir": "up"
+   },
+   {
+    "kind": "slide",
+    "id": "B",
+    "dir": "right"
+   }
+  ],
+  "level": {
+   "width": 6,
+   "height": 6,
+   "mask": [
+    "######",
+    "######",
+    "##..##",
+    "##..##",
+    "######",
+    "######"
+   ],
+   "walls": [
+    {
+     "x": 5,
+     "y": 0
+    },
+    {
+     "x": 0,
+     "y": 4
+    },
+    {
+     "x": 4,
+     "y": 4
+    }
+   ],
+   "balls": [
+    {
+     "id": "A",
+     "color": "pink",
+     "x": 4,
+     "y": 2
+    },
+    {
+     "id": "B",
+     "color": "teal",
+     "x": 3,
+     "y": 1
+    },
+    {
+     "id": "C",
+     "color": "pink",
+     "x": 0,
+     "y": 3
+    }
+   ],
+   "gates": [
+    {
+     "color": "pink",
+     "side": "up",
+     "index": 2
+    },
+    {
+     "color": "teal",
+     "side": "up",
+     "index": 4
+    }
+   ],
+   "maxMoves": 10,
+   "trailLife": 2,
+   "trailClock": "owner",
+   "sticky": [
+    {
+     "x": 1,
+     "y": 0
+    }
+   ],
+   "arrows": [
+    {
+     "x": 2,
+     "y": 0,
+     "dir": "down"
+    }
+   ]
+  }
+ },
+ {
+  "minMoves": 7,
+  "tier": "medium",
+  "concept": "Mũi tên và cổng dịch chuyển trên bàn chữ thập",
+  "needs": {
+   "brake": true,
+   "undo": false
+  },
+  "solution": [
+   {
+    "kind": "slide",
+    "id": "A",
+    "dir": "left"
+   },
+   {
+    "kind": "slide",
+    "id": "C",
+    "dir": "right"
+   },
+   {
+    "kind": "slide",
+    "id": "C",
+    "dir": "up"
+   },
+   {
+    "kind": "slide",
+    "id": "B",
+    "dir": "left"
+   },
+   {
+    "kind": "slide",
+    "id": "C",
+    "dir": "down"
+   },
+   {
+    "kind": "slide",
+    "id": "C",
+    "dir": "right"
+   },
+   {
+    "kind": "slide",
+    "id": "C",
+    "dir": "right"
+   }
+  ],
+  "level": {
+   "width": 7,
+   "height": 7,
+   "mask": [
+    "..###..",
+    "..###..",
+    "#######",
+    "#######",
+    "#######",
+    "..###..",
+    "..###.."
+   ],
+   "walls": [
+    {
+     "x": 6,
+     "y": 3
+    },
+    {
+     "x": 4,
+     "y": 6
+    },
+    {
+     "x": 2,
+     "y": 5
+    },
+    {
+     "x": 3,
+     "y": 0
+    }
+   ],
+   "balls": [
+    {
+     "id": "A",
+     "color": "pink",
+     "x": 5,
+     "y": 2
+    },
+    {
+     "id": "B",
+     "color": "teal",
+     "x": 6,
+     "y": 4
+    },
+    {
+     "id": "C",
+     "color": "gold",
+     "x": 2,
+     "y": 4
+    }
+   ],
+   "gates": [
+    {
+     "color": "pink",
+     "side": "left",
+     "index": 2
+    },
+    {
+     "color": "teal",
+     "side": "down",
+     "index": 5,
+     "depth": 2
+    },
+    {
+     "color": "gold",
+     "side": "down",
+     "index": 6,
+     "depth": 2
+    }
+   ],
+   "maxMoves": 9,
+   "trailLife": 2,
+   "trailClock": "owner",
+   "arrows": [
+    {
+     "x": 4,
+     "y": 3,
+     "dir": "left"
+    }
+   ],
+   "portals": [
+    {
+     "a": {
+      "x": 4,
+      "y": 5
+     },
+     "b": {
+      "x": 3,
+      "y": 4
+     }
+    }
+   ]
+  }
+ },
+ {
+  "minMoves": 5,
+  "tier": "easy",
+  "concept": "Hồi sức: thạch ẩn trên bàn vuông",
+  "needs": {
+   "brake": false,
+   "undo": false
+  },
+  "solution": [
+   {
+    "kind": "slide",
+    "id": "A",
+    "dir": "down"
+   },
+   {
+    "kind": "slide",
+    "id": "A",
+    "dir": "left"
+   },
+   {
+    "kind": "slide",
+    "id": "B",
+    "dir": "left"
+   },
+   {
+    "kind": "slide",
+    "id": "C",
+    "dir": "down"
+   },
+   {
+    "kind": "slide",
+    "id": "C",
+    "dir": "left"
+   }
+  ],
+  "level": {
+   "width": 5,
+   "height": 5,
+   "walls": [
+    {
+     "x": 4,
+     "y": 1
+    }
+   ],
+   "balls": [
+    {
+     "id": "A",
+     "color": "pink",
+     "x": 2,
+     "y": 0,
+     "hidden": true
+    },
+    {
+     "id": "B",
+     "color": "teal",
+     "x": 3,
+     "y": 3
+    },
+    {
+     "id": "C",
+     "color": "pink",
+     "x": 3,
+     "y": 1
+    }
+   ],
+   "gates": [
+    {
+     "color": "pink",
+     "side": "down",
+     "index": 0
+    },
+    {
+     "color": "teal",
+     "side": "left",
+     "index": 3
+    }
+   ],
+   "maxMoves": 8,
+   "trailLife": 2,
+   "trailClock": "owner"
+  }
+ },
+ {
+  "minMoves": 11,
+  "tier": "super",
+  "concept": "SIÊU KHÓ — BOSS: mọi mechanic, phanh bắt buộc",
+  "needs": {
+   "brake": true,
+   "undo": true
+  },
+  "solution": [
+   {
+    "kind": "slide",
+    "id": "B",
+    "dir": "up"
+   },
+   {
+    "kind": "slide",
+    "id": "B",
+    "dir": "left"
+   },
+   {
+    "kind": "undo",
+    "id": "B"
+   },
+   {
+    "kind": "slide",
+    "id": "C",
+    "dir": "up"
+   },
+   {
+    "kind": "slide",
+    "id": "C",
+    "dir": "left"
+   },
+   {
+    "kind": "slide",
+    "id": "A",
+    "dir": "down"
+   },
+   {
+    "kind": "slide",
+    "id": "C",
+    "dir": "down"
+   },
+   {
+    "kind": "slide",
+    "id": "C",
+    "dir": "right"
+   },
+   {
+    "kind": "slide",
+    "id": "C",
+    "dir": "up"
+   },
+   {
+    "kind": "slide",
+    "id": "C",
+    "dir": "left"
+   },
+   {
+    "kind": "slide",
+    "id": "B",
+    "dir": "down"
+   }
+  ],
+  "level": {
+   "width": 7,
+   "height": 7,
+   "mask": [
+    "..###..",
+    ".#####.",
+    "#######",
+    "#######",
+    "#######",
+    ".#####.",
+    "..###.."
+   ],
+   "walls": [
+    {
+     "x": 4,
+     "y": 6
+    },
+    {
+     "x": 4,
+     "y": 0
+    },
+    {
+     "x": 1,
+     "y": 5
+    }
+   ],
+   "balls": [
+    {
+     "id": "A",
+     "color": "pink",
+     "x": 4,
+     "y": 1,
+     "axis": "v"
+    },
+    {
+     "id": "B",
+     "color": "teal",
+     "x": 6,
+     "y": 3,
+     "hidden": true
+    },
+    {
+     "id": "C",
+     "color": "pink",
+     "x": 3,
+     "y": 4
+    }
+   ],
+   "gates": [
+    {
+     "color": "pink",
+     "side": "left",
+     "index": 0,
+     "depth": 2
+    },
+    {
+     "color": "teal",
+     "side": "right",
+     "index": 4
+    }
+   ],
+   "maxMoves": 12,
+   "trailLife": 2,
+   "trailClock": "owner",
+   "sticky": [
+    {
+     "x": 1,
+     "y": 1
+    }
+   ],
+   "arrows": [
+    {
+     "x": 3,
+     "y": 1,
+     "dir": "right"
+    }
+   ],
+   "portals": [
+    {
+     "a": {
+      "x": 4,
+      "y": 3
+     },
+     "b": {
+      "x": 2,
+      "y": 0
+     }
+    }
+   ]
+  }
+ }
+]
