@@ -5,10 +5,10 @@ import type { Dir, Level } from './core/rules';
 import { chunkyButton, quiltBackground, ribbon3d, roundButton, type ButtonKind } from './ui-kit';
 
 export const COLOR_HEX: Record<string, string> = {
-  pink: '#ff5c8a',
-  teal: '#2fb9cc',
-  gold: '#ffc93c',
-  violet: '#9b6bff',
+  pink: '#ff3b80',
+  teal: '#12b9e0',
+  gold: '#ffbf1f',
+  violet: '#8657ff',
 };
 
 export const THEME = {

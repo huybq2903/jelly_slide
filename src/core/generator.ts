@@ -2,7 +2,7 @@
 
 import { adjacentGate, boardCells, gateCell, validateLevel, type Dir, type Level, type Pos, type TrailClock } from './rules';
 import { shapeMask, type ShapeDef } from './shapes';
-import { SolverLimit, featuresUsed, solve as rawSolve, type BoosterKey, type Move, type SolveOptions } from './solver';
+import { SolverLimit, arrowsTouched, brakeOwnership, featuresUsed, solve as rawSolve, type BoosterKey, type Move, type SolveOptions } from './solver';
 
 /** Giới hạn số nút của solver khi sinh level: vượt thì bỏ ứng viên. */
 const GEN_NODE_CAP = 150000;
@@ -59,6 +59,8 @@ export interface LevelSpec {
     axisMatters?: boolean;
     /** Dùng vệt làm phanh giúp ích: cấm phanh thì lời giải dài hơn (hoặc vô giải). Nhẹ hơn `brake`. */
     brakeHelps?: boolean;
+    /** Lời giải ngắn nhất phải phanh nhờ vệt của khối KHÁC (không phanh bằng vệt của chính nó, không hoàn tác). */
+    otherBrake?: boolean;
     /** Vệt thật sự ảnh hưởng: không có vệt (trailLife 0) thì giải được ngắn hơn. */
     trailMatters?: boolean;
   };
@@ -271,6 +273,8 @@ export function generateLevels(spec: LevelSpec, count: number, seed: number, max
         const used = featuresUsed(level, sol.moves);
         if (!present.every((f) => used.has(f))) continue;
       }
+      // mọi ô mũi tên phải được lời giải đi qua (không có ô mũi tên thừa chỉ để làm bẫy)
+      if (level.arrows?.length && arrowsTouched(level, sol.moves) < level.arrows.length) continue;
       // thạch đóng băng phải thật sự được dùng (lời giải có cú làm vỡ băng); khoá/nhịp của cổng phải làm lời giải dài hơn
       if (level.balls.some((b) => b.frozen) && !featuresUsed(level, sol.moves).has('frozen')) continue;
       let gateOk = true;
@@ -307,6 +311,10 @@ export function generateLevels(spec: LevelSpec, count: number, seed: number, max
       if (spec.require?.brakeHelps) {
         const alt = solve(cand, { noTrailStops: true });
         if (!(sol.trailStops > 0 && (!alt || alt.length > sol.length))) continue;
+      }
+      if (spec.require?.otherBrake) {
+        const own = brakeOwnership(level, sol.moves);
+        if (own.other < 1 || own.own > 0 || sol.undos > 0) continue;
       }
       if (spec.require?.brake && !needBrake) continue;
       if (spec.require?.undo && !needUndo) continue;

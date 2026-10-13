@@ -18,10 +18,10 @@ export interface BoosterDef {
 
 /** Thứ tự cũng là thứ tự bốn ô trên thanh dưới: từ trái sang phải theo thứ tự mở khoá (level tăng dần). */
 export const BOOSTERS: BoosterDef[] = [
-  { key: 'pin', name: 'Block', desc: 'Places a solid block on an empty cell. It stays there for the whole level.', hint: 'Tap an empty cell to place a block for good!', unlock: 8 },
-  { key: 'basket', name: 'Rainbow Gate', desc: 'Pick a gate: it takes a block of any colour, once.', hint: 'Tap a gate: it will take a block of any colour, once!', unlock: 11 },
-  { key: 'magnet', name: 'Magnet', desc: 'Pulls a block lined up with its gate straight in, through anything.', hint: 'Tap a glowing block to pull it straight into its gate!', unlock: 16 },
-  { key: 'bomb', name: 'Jelly Bomb', desc: 'Pops on an empty cell and pushes the 4 blocks beside it one cell away.', hint: 'Tap an empty cell to drop the bomb and blast the blocks beside it!', unlock: 21 },
+  { key: 'pin', name: 'Khối chặn', desc: 'Đặt một khối đặc lên ô trống. Khối ở lại suốt màn chơi.', hint: 'Chạm một ô trống để đặt khối vĩnh viễn!', unlock: 8 },
+  { key: 'basket', name: 'Cổng cầu vồng', desc: 'Chọn một cổng: cổng nhận khối màu bất kỳ, một lần.', hint: 'Chạm một cổng: cổng sẽ nhận khối màu bất kỳ, một lần!', unlock: 11 },
+  { key: 'magnet', name: 'Nam châm', desc: 'Hút khối đang thẳng hàng với cổng của nó vào thẳng cổng, xuyên mọi vật cản.', hint: 'Chạm một khối đang sáng: nam châm hút nó xuyên mọi vật cản vào cổng!', unlock: 16 },
+  { key: 'bomb', name: 'Bom thạch', desc: 'Nổ ở một ô trống và đẩy 4 khối bên cạnh ra xa một ô.', hint: 'Chạm một ô trống để thả bom và đẩy các khối bên cạnh!', unlock: 21 },
 ];
 
 /** Số booster tặng khi mở khoá. */
@@ -87,7 +87,12 @@ export function spend(key: BoosterKey): boolean {
 export function unlocksAt(levelNumber: number): BoosterKey[] {
   const popup: BoosterKey[] = [];
   for (const b of BOOSTERS) {
-    if (isGranted(b.key) || levelNumber < unlockLevel(b.key)) continue;
+    if (isGranted(b.key)) {
+      // bản dev: vào đúng level mở khoá thì vẫn hiện popup giới thiệu (như popup mechanic) để xem lại; không tặng thêm
+      if (import.meta.env.DEV && !devAll && levelNumber === unlockLevel(b.key) && !new URLSearchParams(location.search).has('play')) popup.push(b.key);
+      continue;
+    }
+    if (levelNumber < unlockLevel(b.key)) continue;
     if (devAll) add(b.key, 5, true); // bản dev: tặng 5 mỗi loại, không popup
     else if (levelNumber === unlockLevel(b.key)) popup.push(b.key);
     else add(b.key, UNLOCK_GIFT, true);

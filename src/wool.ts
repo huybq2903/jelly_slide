@@ -335,10 +335,11 @@ export function doorMaterial(hex: string): MeshPhysicalMaterial {
     map: m.map,
     normalMap: m.normal,
     normalScale: new Vector2(1.6, 1.6),
-    roughness: 0.36,
+    roughness: 0.5,
     metalness: 0.02,
-    clearcoat: 0.6,
-    clearcoatRoughness: 0.22,
+    clearcoat: 0.12, // ít bóng: mặt trên phẳng mà bóng nhiều thì phản chiếu ánh đèn làm màu cửa nhạt đi
+    clearcoatRoughness: 0.3,
+    specularIntensity: 0.45,
   });
 }
 

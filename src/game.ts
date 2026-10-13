@@ -1,8 +1,8 @@
 // Jelly Slide — game thạch. Lõi luật ở src/core, phần vẽ ở src/render.ts;
 // file này nối trạng thái, vuốt, hoạt ảnh và hợp đồng FalconGame.
 
-import { armWild, createState, gateCell, gateKey, gateOpen, isEmptyCell, trailLeft, magnetGate, placeBomb, placePin, slide, status, undo, undoDir, useMagnet, type BoosterMove, type BoosterResult, type Dir, type MoveResult, type Pos, type State } from './core/rules';
-import { BOOSTERS, UNLOCK_GIFT, add as addBooster, countOf, defOf, logUse, spend, unlockLevel, unlocksAt, watchAdFor, type BoosterKey } from './boosters';
+import { armWild, createState, gateCell, gateKey, gateOpen, isEmptyCell, isPinnable, trailLeft, magnetGate, placeBomb, placePin, slide, status, undo, undoDir, useMagnet, type BoosterMove, type BoosterResult, type Dir, type MoveResult, type Pos, type State } from './core/rules';
+import { BOOSTERS, UNLOCK_GIFT, add as addBooster, countOf, defOf, isGranted, logUse, spend, unlockLevel, unlocksAt, watchAdFor, type BoosterKey } from './boosters';
 import { drawBoosterIcon, drawBoosterSlot, drawCoin, type BoosterSlotState } from './booster-art';
 import { drawBrokenHeart } from './heart';
 import { Confetti } from './confetti';
@@ -135,13 +135,15 @@ interface Anim {
   /** Hướng đi (dx, dy tính theo ô). */
   dirV: Pos;
   /** Chỉ có khi khối dừng vì vật cản: độ mạnh cú va và khối khác bị đụng (nếu có). */
-  impact?: { amp: number; bumpId: string | null };
+  impact?: { amp: number; bumpId: string | null; /** Ô vệt bị đâm: nảy lại (độ mạnh và độ trễ ms). */ bumpCells?: { x: number; y: number; amp: number; delay: number }[]; /** Thạch liền kề thạch bị đâm: nảy theo sau. */ bumpExtra?: { id: string; amp: number; delay: number }[] };
   /** Chỉ có khi khối bị hút ra: vệt của nó bị kéo vào giỏ như con rắn. */
   snake?: { cells: SnakeCell[]; side: Dir; pullStart: number; pullDur: number };
   /** Lượt của cú trượt đang diễn ra (null với hoàn tác và booster): vệt của nó hiện dần theo đường đi. */
   turn: number | null;
   /** Nam châm: khối vọt lên theo cung cao chừng này (ô) khi bay xuyên vật cản. */
   arc?: number;
+  /** Nam châm: khối bị hút, vận tốc tăng dần cho tới khi vào cổng. */
+  accel?: boolean;
   /** Chỉ số các đoạn của `pts` là dịch chuyển qua cổng: khối co lại ở ô vào rồi hiện ra ở ô ra, không bay ngang bàn. */
   jumps?: number[];
 }
@@ -257,14 +259,14 @@ const REVIVE_MOVES = 5;
 /** Các "tính năng mới" theo level mở khoá (mechanic và booster) cho thanh tiến trình ở popup thắng. Thêm mechanic mới vào đây khi làm xong. */
 /** Mô tả các mechanic để hiện ở popup giới thiệu. Thêm mechanic mới vào đây (cùng `introduces` trong kịch bản). */
 const MECHANICS: Record<string, { name: string; desc: string }> = {
-  axis: { name: 'Arrow Jelly', desc: 'This jelly only slides along its arrows.' },
-  hidden: { name: 'Mystery Jelly', desc: 'Its colour is a secret until it moves.' },
-  arrows: { name: 'Arrow Tile', desc: 'Jellies turn to follow the arrow.' },
-  portals: { name: 'Portal', desc: 'Go in one portal, come out the other.' },
-  sticky: { name: 'Sticky Goo', desc: 'Jellies stop dead on sticky goo.' },
-  frozen: { name: 'Frozen Jelly', desc: 'Bump it with another jelly to crack the ice.' },
-  lock: { name: 'Frozen Gate', desc: 'It opens after jellies exit elsewhere.' },
-  rhythm: { name: 'Rhythm Gate', desc: 'It only opens on odd or even moves.' },
+  axis: { name: 'Thạch một trục', desc: 'Thạch này chỉ trượt theo mũi tên của nó.' },
+  hidden: { name: 'Thạch ẩn', desc: 'Màu của nó được giấu cho tới khi nó di chuyển.' },
+  arrows: { name: 'Ô mũi tên', desc: 'Thạch đi qua sẽ rẽ theo mũi tên.' },
+  portals: { name: 'Cổng dịch chuyển', desc: 'Vào cổng này, ra ở cổng kia.' },
+  sticky: { name: 'Ô dính', desc: 'Thạch chạm vào là dừng lại ngay.' },
+  frozen: { name: 'Thạch đóng băng', desc: 'Đâm một thạch khác vào để làm vỡ băng.' },
+  lock: { name: 'Cổng đóng băng', desc: 'Chỉ mở sau khi có thạch ra ở cổng khác.' },
+  rhythm: { name: 'Cổng theo nhịp', desc: 'Chỉ mở ở lượt lẻ hoặc lượt chẵn.' },
 };
 const FEATURES: Feature[] = [
   { level: 6, kind: 'mechanic', key: 'axis', name: MECHANICS.axis.name },
@@ -392,7 +394,7 @@ function setState(next: State, skip?: Set<string>, delayMs = 0, chain?: ExitChai
  * Vào level `i`. `instant`: bỏ hiệu ứng mở màn và vẽ ngay khung đầu (preview, thumbnail, kiểm tra của IDE chụp ngay sau khi gọi nên không thể
  * chờ bàn bay vào); tutorial và popup mở khoá vẫn hiện bình thường sau đó.
  */
-function startLevel(i: number, instant = false): void {
+function startLevel(i: number, instant = false, slide = false): void {
   index = Math.max(0, Math.min(LEVEL_COUNT - 1, Math.floor(i)));
   state = createState(LEVELS[index].level);
   scene?.setLevel(state.level);
@@ -430,7 +432,11 @@ function startLevel(i: number, instant = false): void {
   winConfetti = null;
   confetti.clear();
   impactFx.clear();
-  introT0 = instant ? performance.now() - 10000 : performance.now();
+  // slide: chuyển màn kiểu trượt (bàn cũ đã bay sang trái): chỉ bàn mới bay vào từ bên phải, HUD đứng yên, không có nhịp trống đầu
+  introSlide = slide;
+  boardExit = null;
+  magnetFx = null;
+  introT0 = instant ? performance.now() - 10000 : slide ? performance.now() - INTRO_BOARD_START_MS : performance.now();
   // số Level/Moves của level mới đặt thẳng, không nảy (chỉ nảy khi đổi giữa lúc chơi)
   statMem.level = { v: index + 1, t0: -1e9 };
   statMem.moves = { v: Math.max(0, state.level.maxMoves - state.turn), t0: -1e9 };
@@ -443,7 +449,7 @@ function startLevel(i: number, instant = false): void {
   newQueue = unlocksAt(index + 1);
   const intro = LEVELS[index].introduces;
   pendingMech = intro && !(import.meta.env.DEV && new URLSearchParams(location.search).has('play')) && (import.meta.env.DEV || !mechSeen(intro)) ? intro : null;
-  if (newQueue.length || pendingMech) window.setTimeout(showNextNew, 1200);
+  if (newQueue.length || pendingMech) window.setTimeout(showNextNew, instant ? 0 : 560 * SLOW); // ngay sau khi bàn bay vào xong
   // Bàn đã sẵn sàng: lớp studio bắt đầu tính giờ ở đây (cả lúc chơi lại).
   const tier = LEVELS[index].tier;
   const difficulty = tier === 'easy' ? 'easy' : tier === 'medium' ? 'normal' : 'hard';
@@ -468,9 +474,8 @@ function finishIfOver(): void {
   if (st === 'won') {
     buzz([20, 40, 20]);
     events.emit('win');
-    // Logo + pháo giấy trước, popup thắng sau.
-    winShow = { t0: endedAt + WIN_DELAY_MS, bursts: 0, letters: 0 };
-    modalTimer = window.setTimeout(skipWin, WIN_DELAY_MS + WIN_TOTAL_MS);
+    // Thắng là sang màn kế luôn (không logo, pháo giấy hay popup thắng): chờ khối vào hẳn cổng rồi trượt bàn mới vào.
+    modalTimer = window.setTimeout(() => slideToLevel(index + 1 < LEVEL_COUNT ? index + 1 : 0), WIN_DELAY_MS + 250);
     return;
   }
   buzz(60);
@@ -514,6 +519,13 @@ function reviveWithMoves(): void {
 // ---------- Mở màn ----------
 // Bắt đầu level: chỉ có nền; bàn chơi bay từ bên phải vào; xong thì HUD trên bay xuống cùng HUD dưới bay lên.
 let introT0 = -1e9;
+let introSlide = false;
+/** Hoạt ảnh nam châm: hiện ở cổng, tia hút nối tới khối được chọn, rồi khối bay vào cổng. */
+let magnetFx: { t0: number; id: string; gate: { side: Dir; index: number; depth?: number }; from: Pos; launchAt: number; endAt: number } | null = null;
+const MAGNET_PRE_MS = 800;
+/** Bàn cũ đang bay sang trái khi thắng màn 1–3 (trước khi vào màn kế). */
+let boardExit: { t0: number } | null = null;
+const BOARD_EXIT_MS = 300;
 const INTRO_HUD_DELAY_MS = 100; // trống 100ms (chỉ có nền) rồi HUD bay vào
 const INTRO_HUD_MS = 220;
 const INTRO_BOARD_MS = 280;
@@ -526,12 +538,12 @@ const easeOutBackIntro = (u: number): number => {
 };
 function introAmts(now: number): { board: number; hud: number } {
   const t = (now - introT0) / SLOW;
-  return { board: easeOutBackIntro((t - INTRO_BOARD_START_MS) / INTRO_BOARD_MS), hud: easeOutBackIntro((t - INTRO_HUD_DELAY_MS) / INTRO_HUD_MS) };
+  return { board: easeOutBackIntro((t - INTRO_BOARD_START_MS) / INTRO_BOARD_MS), hud: introSlide ? 1 : easeOutBackIntro((t - INTRO_HUD_DELAY_MS) / INTRO_HUD_MS) };
 }
 const introActive = (now = performance.now()): boolean => (now - introT0) / SLOW < Math.max(INTRO_HUD_DELAY_MS + INTRO_HUD_MS, INTRO_BOARD_START_MS + INTRO_BOARD_MS);
 
 function canAct(): boolean {
-  return !paused && !introActive() && !anim && !fx && !wildFx && !modal && !menu.open && !ended && status(state) === 'playing';
+  return !paused && !introActive() && !newQueue.length && !pendingMech && !boardExit && !magnetFx && !anim && !fx && !wildFx && !modal && !menu.open && !ended && status(state) === 'playing';
 }
 
 // ---------- Booster: bật, chọn mục tiêu, thực hiện ----------
@@ -541,7 +553,7 @@ function onBoosterTap(key: BoosterKey): void {
   if (paused || anim || fx || modal || ended || status(state) !== 'playing') return;
   const ts = tutCur();
   if (ts && !(ts.kind === 'booster' && ts.key === key)) return tutNudge();
-  if (index + 1 < unlockLevel(key)) return deny(`Unlocks at level ${unlockLevel(key)}`);
+  if (index + 1 < unlockLevel(key)) return deny(`Mở khoá ở màn ${unlockLevel(key)}`);
   if (armed === key) {
     armed = null;
     invalidate();
@@ -556,17 +568,17 @@ function onBoosterTap(key: BoosterKey): void {
 }
 
 const NO_TARGET: Record<BoosterKey, string> = {
-  pin: 'No empty cell to pin',
-  bomb: 'No empty cell for a bomb',
-  magnet: 'No jelly is lined up with its gate',
-  basket: 'No gate to pick',
+  pin: 'Không còn ô trống để đặt khối',
+  bomb: 'Không còn ô trống để thả bom',
+  magnet: 'Không có thạch nào thẳng hàng với cổng',
+  basket: 'Không có cổng để chọn',
 };
 
 /** Booster này có mục tiêu hợp lệ trên bàn hiện tại không. */
 function hasTarget(key: BoosterKey): boolean {
   if (key === 'basket') return state.level.gates.length > 0;
   if (key === 'magnet') return Object.keys(state.balls).some((id) => magnetGate(state, id));
-  for (let yy = 0; yy < state.level.height; yy++) for (let xx = 0; xx < state.level.width; xx++) if (isEmptyCell(state, xx, yy)) return true;
+  for (let yy = 0; yy < state.level.height; yy++) for (let xx = 0; xx < state.level.width; xx++) if (key === 'pin' ? isPinnable(state, xx, yy) : isEmptyCell(state, xx, yy)) return true;
   return false;
 }
 
@@ -598,7 +610,7 @@ function onArmedTap(x: number, y: number): void {
   if (armed === 'pin' || armed === 'bomb') {
     const c = scene?.pick(x, y);
     if (!c) return;
-    if (!isEmptyCell(state, c.x, c.y)) return deny('Needs an empty cell');
+    if (armed === 'pin' ? !isPinnable(state, c.x, c.y) : !isEmptyCell(state, c.x, c.y)) return deny(armed === 'pin' && isEmptyCell(state, c.x, c.y) ? 'Không đặt khối lên ô cổng' : 'Cần một ô trống');
     if (!tutTargetOk({ x: c.x, y: c.y })) return tutNudge();
     if (armed === 'pin') {
       const r = placePin(state, c.x, c.y);
@@ -618,20 +630,32 @@ function onArmedTap(x: number, y: number): void {
   } else if (armed === 'magnet') {
     const id = scene?.pickBall(x, y, Object.entries(state.balls).map(([bid, p]) => ({ id: bid, x: p.x, y: p.y })));
     if (!id) return;
-    if (!magnetGate(state, id)) return deny('Not lined up with its gate');
+    if (!magnetGate(state, id)) return deny('Chưa thẳng hàng với cổng');
     if (!tutTargetOk({ id })) return tutNudge();
     const r = useMagnet(state, id);
     if (!r.ok) return;
     consume('magnet');
     play('magnet');
     buzz([20, 40, 20]);
-    launchExit(state, r.state, r.moved[0], 'magnet', performance.now());
+    // Nam châm hiện ra ở cổng, tia hút nối tới khối được chọn (xuyên qua mọi vật cản), rồi khối mới bị hút vào cổng.
+    const mv = r.moved[0];
+    const gdef = state.level.gates.find((q) => gateKeyAt(state.level, mv.exit!, mv.to) === gateKey(q));
+    if (!gdef) return launchExit(state, r.state, mv, 'magnet', performance.now());
+    const t0 = performance.now();
+    magnetFx = { t0, id, gate: { side: gdef.side, index: gdef.index, depth: gdef.depth }, from: { ...mv.from }, launchAt: t0 + MAGNET_PRE_MS * SLOW, endAt: Infinity };
+    const after = r.state;
+    const myFx = magnetFx;
+    window.setTimeout(() => {
+      if (!magnetFx || magnetFx !== myFx) return; // đã chơi lại / sang màn khác trong lúc chờ
+      launchExit(state, after, mv, 'magnet', performance.now());
+      magnetFx.endAt = performance.now() + (anim ? anim.moveDur * 0.98 : 400) + 450;
+    }, MAGNET_PRE_MS * SLOW);
   } else if (armed === 'basket') {
     const gt = scene?.pickGate(x, y, cellPx() * 0.8);
     if (!gt) return;
     if (!tutTargetOk({ gate: gt })) return tutNudge();
     const r = armWild(state, gt.side, gt.index, gt.depth ?? 0);
-    if (!r.ok) return deny('That gate is already rainbow');
+    if (!r.ok) return deny('Cổng này đã là cổng cầu vồng');
     consume('basket');
     play('rainbow');
     wildFx = { key: gateKey(gt), side: gt.side, index: gt.index, depth: gt.depth, slotIdx: BOOSTERS.findIndex((q) => q.key === 'basket'), t0: performance.now() };
@@ -658,9 +682,10 @@ function launchExit(prev: State, next: State, m: BoosterMove, mode: 'magnet' | '
     }
     pts.push(door);
   } else pts = [{ ...m.from }, { ...m.to }, door];
-  const moveDur = SLOW * (mode === 'magnet' ? Math.min(600, 300 + 70 * (pts.length - 1)) : Math.min(340, 140 + 60 * (pts.length - 1)));
+  const moveDur = SLOW * (mode === 'magnet' ? Math.min(480, 220 + 40 * (pts.length - 1)) : Math.min(340, 140 + 60 * (pts.length - 1)));
   const dirV = { x: Math.sign(m.to.x - m.from.x) || d.x, y: Math.sign(m.to.y - m.from.y) || d.y };
-  setState(next, undefined, moveDur * 0.9, { door }); // vệt của khối vỡ thành một chuỗi hướng về cửa lúc khối chui vào cửa
+  const hit = mode === 'magnet' ? 0.96 : 0.8; // lúc khối chạm cổng (nam châm: vận tốc tăng dần nên tới sát cuối)
+  setState(next, undefined, moveDur * (hit + 0.1), { door }); // vệt của khối vỡ thành một chuỗi hướng về cửa lúc khối chui vào cửa
   anim = {
     id: m.id,
     color: colorOf(m.id),
@@ -674,10 +699,11 @@ function launchExit(prev: State, next: State, m: BoosterMove, mode: 'magnet' | '
     gateKey: gateKeyAt(next.level, side, m.to),
     dirV,
     turn: null,
-    arc: mode === 'magnet' ? 0.55 : 0,
+    arc: mode === 'magnet' ? 0.3 : 0,
+    accel: mode === 'magnet',
   };
-  play('gate', 0, (moveDur * 0.9) / 1000);
-  gateKick = { key: anim.gateKey!, t0: t0 + moveDur * 0.8 + 0.25 * (moveDur * 0.2 + UNRAVEL_MS) };
+  play('gate', 0, (moveDur * hit) / 1000);
+  gateKick = { key: anim.gateKey!, t0: t0 + moveDur * hit + 0.25 * (moveDur * (1 - hit) + UNRAVEL_MS) };
   invalidate();
 }
 
@@ -740,21 +766,17 @@ function tryMove(id: string, dir: Dir): void {
   const ts = tutCur();
   if (ts && !((ts.kind === 'slide' || ts.kind === 'undo') && ts.id === id && ts.dir === dir)) return tutNudge();
   // Kéo ngược theo vệt vừa đi = hoàn tác khối này (hướng này luôn bị vệt chặn nên không lẫn với cú trượt).
-  if (dir === undoDir(state, id)) return doUndo(id);
+  if (dir === undoDir(state, id) && !slide(state, id, dir).ok) return doUndo(id); // sau cổng dịch chuyển hướng kéo ngược có thể trùng một cú trượt hợp lệ: ưu tiên cú trượt
   const prevOutCount = state.out.length;
   const r = slide(state, id, dir);
-  if (!r.ok && r.reason === 'frozen') {
-    shake = { id, t0: performance.now() };
+  if (!r.ok && (r.reason === 'frozen' || r.reason === 'axis')) {
+    // thạch đóng băng / thạch một trục bị vuốt sai: không đi, nhún dẹp theo hướng vuốt như đập vào tường (không rung ngang) và nhắc luật
+    const bv = DELTA[dir];
+    impacts = impacts.filter((im) => im.id !== id);
+    impacts.push({ id, dx: bv.x, dy: bv.y, t0: performance.now(), amp: 0.7, kind: 'hit' });
     buzz(10);
-    deny('Frozen! Bump it with another jelly');
-    invalidate();
-    return;
-  }
-  if (!r.ok && r.reason === 'axis') {
-    // thạch một trục bị vuốt ngang trục: không đi, rung nhẹ tại chỗ và nhắc luật
-    shake = { id, t0: performance.now() };
-    buzz(10);
-    deny('This jelly only slides along its arrows');
+    play('bump', 0.5);
+    deny(r.reason === 'frozen' ? 'Đóng băng! Hãy đâm một thạch khác vào nó' : 'Thạch này chỉ trượt theo mũi tên của nó');
     invalidate();
     return;
   }
@@ -766,7 +788,15 @@ function tryMove(id: string, dir: Dir): void {
     const tNow = performance.now();
     impacts = impacts.filter((im) => im.id !== id && im.id !== other);
     impacts.push({ id, dx: bv.x, dy: bv.y, t0: tNow, amp: other ? 0.85 : 0.75, kind: 'hit' });
-    if (other) impacts.push({ id: other, dx: bv.x, dy: bv.y, t0: tNow, amp: 0.8, kind: 'bump' });
+    if (bf) {
+      const hx = bf.x + bv.x;
+      const hy = bf.y + bv.y;
+      if (other) impacts.push({ id: other, dx: bv.x, dy: bv.y, t0: tNow, amp: 0.8, kind: 'bump' });
+      else if (state.trails.some((t) => t.x === hx && t.y === hy && trailLeft(state, t) > 0)) impacts.push({ id: `trail:${hx},${hy}`, dx: bv.x, dy: bv.y, t0: tNow, amp: 0.8, kind: 'bump' });
+      const rp = ripple(state, hx, hy, id, bf, 0.75);
+      for (const b of rp.balls) impacts.push({ id: b.id, dx: bv.x, dy: bv.y, t0: tNow + b.delay, amp: b.amp * 0.85, kind: 'bump' });
+      for (const c of rp.cells) impacts.push({ id: `trail:${c.x},${c.y}`, dx: bv.x, dy: bv.y, t0: tNow + c.delay, amp: c.amp * 0.85, kind: 'bump' });
+    }
     buzz(8);
     play(other ? 'bumpBall' : 'bump', 0.6);
     invalidate();
@@ -797,7 +827,17 @@ function tryMove(id: string, dir: Dir): void {
       const ny = r.to.y + dv.y;
       bumpId = Object.entries(state.balls).find(([bid, p]) => bid !== id && p.x === nx && p.y === ny)?.[0] ?? null;
     }
-    impact = { amp, bumpId };
+    // Ô bị đâm (thạch hoặc vệt) nảy mạnh nhất; mọi thạch và vệt sát nó nảy theo sau yếu hơn.
+    let bumpCells: { x: number; y: number; amp: number; delay: number }[] = [];
+    let hx = r.to.x + dv.x;
+    let hy = r.to.y + dv.y;
+    if (r.stop === 'trail') {
+      if (state.trails.some((t) => t.x === hx && t.y === hy && trailLeft(state, t) > 0)) bumpCells.push({ x: hx, y: hy, amp: Math.min(1, amp * 1.5), delay: 0 });
+    }
+    const rp = r.stop === 'trail' || r.stop === 'ball' ? ripple(state, hx, hy, id, r.to, amp) : { balls: [], cells: [] };
+    bumpCells = bumpCells.concat(rp.cells);
+    const bumpExtra = rp.balls;
+    impact = { amp, bumpId, bumpCells, bumpExtra };
   }
   impacts = impacts.filter((im) => im.id !== id);
   setState(r.state, undefined, r.exit ? ANTIC_MS + moveDur * 0.9 : 0, exitChain); // khối thoát: mọi vệt của nó vỡ thành một chuỗi hướng về cửa
@@ -808,8 +848,8 @@ function tryMove(id: string, dir: Dir): void {
     const col = colorOf(id);
     const shut = state.level.gates.find((q) => q.color === col && (() => { const cc = gateCell(state.level, q); return cc.x === r.to!.x && cc.y === r.to!.y; })());
     if (shut) {
-      if (shut.lock && prevOutCount < shut.lock) showToast(`Gate frozen: ${shut.lock - prevOutCount} more jelly must exit first`);
-      else if (shut.rhythm) showToast(`This gate opens on ${shut.rhythm} moves`);
+      if (shut.lock && prevOutCount < shut.lock) showToast(`Cổng đóng băng: cần thêm ${shut.lock - prevOutCount} thạch ra trước`);
+      else if (shut.rhythm) showToast(`Cổng này mở ở lượt ${shut.rhythm === 'even' ? 'chẵn' : 'lẻ'}`);
     }
   }
   buzz(r.exit ? 18 : 10);
@@ -836,9 +876,17 @@ function tryMove(id: string, dir: Dir): void {
   invalidate();
 }
 
+/** Đường đi của một cú trượt, đảo chiều (từ ô cuối về ô xuất phát), cùng chỉ số các đoạn dịch chuyển đã đảo; null nếu cú trượt đi thẳng. */
+function reversedPath(rec: { path?: Pos[]; jumps?: number[] }): { path: Pos[]; jumps: number[] } | null {
+  if (!rec.path || rec.path.length < 2) return null;
+  const n = rec.path.length;
+  return { path: [...rec.path].reverse().map((p) => ({ ...p })), jumps: (rec.jumps ?? []).map((i) => n - 2 - i) };
+}
+
 function doUndo(id: string): void {
   if (!canAct() || !undoDir(state, id)) return;
   const cur = state.balls[id];
+  const rec = state.history[id].at(-1);
   const r = undo(state, id);
   if (!r.ok) return;
   setState(r.state);
@@ -848,7 +896,11 @@ function doUndo(id: string): void {
   const back = r.state.balls[id];
   const dvU = { x: Math.sign(back.x - cur.x), y: Math.sign(back.y - cur.y) };
   // về tới ô xuất phát thì khối rung rinh như vừa đập vào vật cản (ép dẹp rồi nảy lại)
-  anim = { id, color: colorOf(id), pts: [{ ...cur }, { ...back }], t0: performance.now(), dur: 170, moveDur: 170, antic: 0, dirV: dvU, exit: false, turn: null, impact: { amp: 0.7, bumpId: null } };
+  // cú trượt có ô mũi tên / cổng dịch chuyển: đi ngược đúng đường cũ (qua cổng này sang cổng kia) rồi mới về ô xuất phát
+  const rev = rec ? reversedPath(rec) : null;
+  const pts = rev ? rev.path : [{ ...cur }, { ...back }];
+  const moveDur = rev ? SLOW * Math.min(520, 170 + 55 * (pts.length - 1)) : 170;
+  anim = { id, color: colorOf(id), pts, t0: performance.now(), dur: moveDur, moveDur, antic: 0, dirV: dvU, exit: false, turn: null, jumps: rev?.jumps, impact: { amp: 0.7, bumpId: null } };
   invalidate();
 }
 
@@ -878,6 +930,16 @@ function openModal(kind: ModalKind, key?: BoosterKey, mech?: string): void {
   invalidate();
 }
 
+/** Sang màn `i` bằng chuyển cảnh trượt: bàn cũ bay sang trái, bàn mới bay vào từ bên phải (dùng cho mọi lần sang màn / chơi lại giữa lúc chơi). */
+function slideToLevel(i: number): void {
+  if (boardExit) return;
+  window.clearTimeout(modalTimer);
+  boardExit = { t0: performance.now() };
+  drag = null;
+  invalidate();
+  modalTimer = window.setTimeout(() => startLevel(i, false, true), BOARD_EXIT_MS);
+}
+
 function closeModal(): void {
   if (modal) play('popupClose');
   if (modal) modalOut = { m: modal, t0: performance.now() };
@@ -887,15 +949,15 @@ function closeModal(): void {
 
 /** Bấm nút chơi lại: chơi lại ngay, không hỏi xác nhận (chưa đi nước nào cũng chơi lại và chạy lại hiệu ứng mở màn). */
 function requestRestart(): void {
-  if (paused || anim || modal || introActive()) return;
-  startLevel(index); // kể cả chưa đi nước nào: vẫn chạy lại hiệu ứng mở màn
+  if (paused || anim || modal || introActive() || boardExit || newQueue.length || pendingMech) return;
+  slideToLevel(index); // kể cả chưa đi nước nào: chơi lại bằng chuyển cảnh trượt
 }
 
 function modalAction(id: 'primary' | 'secondary'): void {
   const m = modal;
   if (!m) return;
   if (m.kind === 'new' && m.key) {
-    addBooster(m.key, UNLOCK_GIFT, true);
+    if (!isGranted(m.key)) addBooster(m.key, UNLOCK_GIFT, true);
     closeModal();
     if (newQueue.length || pendingMech) window.setTimeout(showNextNew, 350);
     return;
@@ -918,7 +980,7 @@ function modalAction(id: 'primary' | 'secondary'): void {
         showToast(`+1 ${defOf(key).name}`);
       } else {
         modal.busy = false;
-        modal.note = 'No video available right now.';
+        modal.note = 'Hiện chưa có video.';
       }
       invalidate();
     });
@@ -932,8 +994,8 @@ function modalAction(id: 'primary' | 'secondary'): void {
     return;
   }
   closeModal();
-  if (m.kind === 'win') startLevel(index + 1 < LEVEL_COUNT ? index + 1 : 0);
-  else startLevel(index);
+  if (m.kind === 'win') slideToLevel(index + 1 < LEVEL_COUNT ? index + 1 : 0);
+  else slideToLevel(index);
 }
 
 function showNextNew(): void {
@@ -1028,8 +1090,8 @@ interface TierTag {
 
 function tierTag(tier: 'easy' | 'medium' | 'hard' | 'super' | undefined): TierTag | null {
   // nền nhãn theo màu chủ đạo của màn: khó = đỏ, siêu khó = tím
-  if (tier === 'hard') return { label: 'HARD', hot: 1, top: '#ff6b6b', bot: '#d42a35', border: '#6b0f18' };
-  if (tier === 'super') return { label: 'VERY HARD', hot: 2, top: '#b07cff', bot: '#6d32c8', border: '#2c1068' };
+  if (tier === 'hard') return { label: 'KHÓ', hot: 1, top: '#ff6b6b', bot: '#d42a35', border: '#6b0f18' };
+  if (tier === 'super') return { label: 'SIÊU KHÓ', hot: 2, top: '#b07cff', bot: '#6d32c8', border: '#2c1068' };
   return null;
 }
 
@@ -1213,6 +1275,31 @@ function hideOf(id: string): number {
   return nv;
 }
 
+/**
+ * Sóng nảy lan từ ô bị đâm (hx, hy): mọi thứ đứng sát nó (bốn hướng), thạch hay vệt, đều nảy theo sau một nhịp và yếu hơn.
+ * Thạch và vệt hành xử như nhau: thạch bị đâm làm cả thạch lẫn vệt bên cạnh nảy, vệt bị đâm cũng vậy. Bỏ qua ô khối đang đâm (`moverPos`).
+ */
+function ripple(st: State, hx: number, hy: number, moverId: string, moverPos: Pos, amp: number): { balls: { id: string; amp: number; delay: number }[]; cells: { x: number; y: number; amp: number; delay: number }[] } {
+  const balls: { id: string; amp: number; delay: number }[] = [];
+  const cells: { x: number; y: number; amp: number; delay: number }[] = [];
+  for (const d of [DELTA.up, DELTA.down, DELTA.left, DELTA.right]) {
+    const nx = hx + d.x;
+    const ny = hy + d.y;
+    if (nx === moverPos.x && ny === moverPos.y) continue;
+    const bid = Object.entries(st.balls).find(([id, p]) => id !== moverId && p.x === nx && p.y === ny)?.[0];
+    if (bid) balls.push({ id: bid, amp: amp * 0.8, delay: 70 });
+    else if (st.trails.some((t) => t.x === nx && t.y === ny && trailLeft(st, t) > 0)) cells.push({ x: nx, y: ny, amp: amp * 0.8, delay: 70 });
+  }
+  return { balls, cells };
+}
+
+/** Nảy của ô vệt bị khối đâm vào: dao động lò xo như khối bị đụng (chưa tới lúc `t0` thì đứng yên). */
+function trailPose(x: number, y: number, now: number): Pose | undefined {
+  const im = impacts.find((q) => q.id === `trail:${x},${y}`);
+  if (!im || now < im.t0) return undefined;
+  return impactPose(-im.dx, -im.dy, now - im.t0, im.amp);
+}
+
 /** Mô tả cảnh 3D ở thời điểm `now`: khối, vệt, giỏ, khối mờ báo điểm dừng và đường chấm (toạ độ tính bằng ô). */
 function buildSceneDesc(now: number): SceneDesc {
   const level = state.level;
@@ -1226,13 +1313,13 @@ function buildSceneDesc(now: number): SceneDesc {
       animPos = { x: anim.pts[0].x, y: anim.pts[0].y, scale: 1, alpha: 1, f: 0, pose: anticipationPose(anim.dirV.x, anim.dirV.y, elapsed / anim.antic), unravel: 0 };
     } else {
       const u = Math.min(1, (elapsed - anim.antic) / anim.moveDur);
-      const f = (anim.turn === null ? ease(u) : slideEase(u)) * segs;
+      const f = (anim.accel ? Math.pow(u, 2.3) : anim.turn === null ? ease(u) : slideEase(u)) * segs;
       const i = Math.min(segs - 1, Math.floor(f));
       const t = f - i;
       const a = anim.pts[i];
       const b = anim.pts[i + 1];
       // Khối bị hút ra: tới gần cửa thì mất kết cấu, tách thành các sợi len bị hút vào cửa (xem unravel trong shader).
-      const unravel = anim.exit ? Math.min(1, Math.max(0, (elapsed - anim.antic - anim.moveDur * 0.8) / (anim.moveDur * 0.2 + UNRAVEL_MS))) : 0;
+      const unravel = anim.exit ? Math.min(1, Math.max(0, (elapsed - anim.antic - anim.moveDur * (anim.accel ? 0.96 : 0.8)) / (anim.moveDur * (anim.accel ? 0.04 : 0.2) + UNRAVEL_MS))) : 0;
       animPos = { x: a.x + (b.x - a.x) * t, y: a.y + (b.y - a.y) * t, scale: 1, alpha: unravel >= 1 ? 0 : 1, f, pose: IDENTITY, unravel };
       if (anim.jumps?.includes(i)) {
         // qua cổng dịch chuyển: co nhỏ dần ở ô vào, rồi lớn lên ở ô ra (không bay ngang bàn)
@@ -1272,7 +1359,7 @@ function buildSceneDesc(now: number): SceneDesc {
     const bp = bid ? (anim && anim.id === bid && animPos ? animPos : state.balls[bid]) : null;
     const bl = bp ? Math.hypot(bp.x - t.x, bp.y - t.y) : 0;
     const toward = bp && bl > 1e-6 ? { x: (bp.x - t.x) / bl, y: (bp.y - t.y) / bl } : undefined;
-    trails.push({ x: t.x, y: t.y, color: tc, kind, scale: 1, alpha: 1, seed: t.turn, dissolve: 0, toward, grow, loosen });
+    trails.push({ x: t.x, y: t.y, color: tc, kind, scale: 1, alpha: 1, seed: t.turn, dissolve: 0, toward, grow, loosen, pose: trailPose(t.x, t.y, now) });
   }
   for (const k of [...trailMem.keys()]) if (!seen.has(k)) trailMem.delete(k); // ô vệt mất đi rồi xuất hiện lại thì mọc lại từ đầu
   if (anim?.snake) {
@@ -1294,12 +1381,13 @@ function buildSceneDesc(now: number): SceneDesc {
   let ghost: SceneDesc['ghost'] = null;
   let line: SceneDesc['line'] = null;
   if (drag?.dir && canAct()) {
-    const back = undoDir(state, drag.id) === drag.dir ? state.history[drag.id].at(-1)!.from : null;
+    const back = undoDir(state, drag.id) === drag.dir && !slide(state, drag.id, drag.dir).ok ? state.history[drag.id].at(-1)!.from : null;
     const r = back ? null : slide(state, drag.id, drag.dir);
     if (back) {
       // kéo ngược theo vệt: khối sẽ quay về ô xuất phát (tốn 1 lượt, vệt tan)
       ghost = { x: back.x, y: back.y, color: colorOf(drag.id) };
-      line = { from: state.balls[drag.id], to: back };
+      const rev = reversedPath(state.history[drag.id].at(-1)!);
+      line = rev ? { from: state.balls[drag.id], to: back, path: rev.path, jumps: rev.jumps } : { from: state.balls[drag.id], to: back };
     } else if (r?.ok && r.to) {
       const from = state.balls[drag.id];
       if (r.exit) {
@@ -1343,7 +1431,7 @@ function buildSceneDesc(now: number): SceneDesc {
   impacts = impacts.filter((im) => now - im.t0 < 800);
   const poseOf = (id: string): Pose => {
     const im = impacts.find((x) => x.id === id);
-    if (!im) return IDENTITY;
+    if (!im || now < im.t0) return IDENTITY;
     // khối bị đụng thì mặt chạm nằm ở phía ngược với hướng khối kia đâm vào
     return im.kind === 'hit' ? impactPose(im.dx, im.dy, now - im.t0, im.amp) : impactPose(-im.dx, -im.dy, now - im.t0, im.amp);
   };
@@ -1371,7 +1459,8 @@ function buildSceneDesc(now: number): SceneDesc {
         blift += Math.sin(Math.PI * Math.max(0, u)) * 0.28;
       }
     }
-    balls.push({ id, x: bx, y: by, scale: 1, alpha: 1, lift: blift, ox: pose.ox + shakeX, oy: pose.oy, sx: pose.sx, sy: pose.sy, sz: pose.sz, unravel: 0, pull: { x: 0, y: 0 } });
+    const w = idleWobble(id, now);
+    balls.push({ id, x: bx, y: by, scale: 1, alpha: 1, lift: blift, ox: pose.ox + shakeX, oy: pose.oy, sx: pose.sx * w.sx, sy: pose.sy * w.sy, sz: pose.sz * w.sz, unravel: 0, pull: { x: 0, y: 0 } });
   }
   if (anim && animPos) {
     const pose = animPos.pose;
@@ -1426,7 +1515,7 @@ function buildSceneDesc(now: number): SceneDesc {
   const marks: MarkDesc[] = [];
   if (armShow && !fx) {
     if (armShow === 'pin' || armShow === 'bomb') {
-      for (let yy = 0; yy < state.level.height; yy++) for (let xx = 0; xx < state.level.width; xx++) if (isEmptyCell(state, xx, yy)) marks.push({ x: xx, y: yy, kind: 'cell' });
+      for (let yy = 0; yy < state.level.height; yy++) for (let xx = 0; xx < state.level.width; xx++) if (armShow === 'pin' ? isPinnable(state, xx, yy) : isEmptyCell(state, xx, yy)) marks.push({ x: xx, y: yy, kind: 'cell' });
     } else if (armShow === 'magnet') {
       for (const [bid, bp] of Object.entries(state.balls)) if (magnetGate(state, bid)) marks.push({ x: bp.x, y: bp.y, kind: 'ball' });
     }
@@ -1463,7 +1552,19 @@ function buildSceneDesc(now: number): SceneDesc {
     b.hide = hideOf(b.id);
     b.ice = iceOf(b.id);
   }
-  return { balls, trails, gates, pins, marks, bomb, focus, threads, ghost: null, line };
+  // điểm hoàn tác: ô mỗi khối sẽ quay về nếu kéo ngược theo vệt (ẩn khi đang di chuyển / kéo / chọn booster)
+  const undoMarks: NonNullable<SceneDesc['undoMarks']> = [];
+  if (canAct() && !anim && !armShow && !drag?.dir) {
+    for (const id of Object.keys(state.balls)) {
+      if (!undoDir(state, id)) continue;
+      const tcur = tutCur();
+      if (tcur && (tcur.kind !== 'undo' || tcur.id !== id)) continue; // đang hướng dẫn: chỉ hiện điểm gốc ở bước lùi lại, và chỉ của khối đó
+      const to = state.history[id].at(-1)!.from;
+      const hot = !!tcur && tcur.kind === 'undo';
+      undoMarks.push({ x: to.x, y: to.y, color: colorOf(id), hot });
+    }
+  }
+  return { balls, trails, gates, pins, marks, bomb, focus, threads, ghost: null, undoMarks, line };
 }
 
 function draw(now: number): void {
@@ -1522,7 +1623,10 @@ function draw(now: number): void {
   const dimAmt = Math.max(armAmt, tutAmt);
   const hudA = 1 - 0.9 * dimAmt;
   const intro = introAmts(now);
-  sceneCanvas.style.transform = Math.abs(1 - intro.board) < 0.0005 ? '' : `translateX(${((1 - intro.board) * 110).toFixed(2)}%)`;
+  if (boardExit) {
+    const u = Math.min(1, (now - boardExit.t0) / BOARD_EXIT_MS);
+    sceneCanvas.style.transform = `translateX(${(-110 * u * u * u).toFixed(2)}%)`; // easeInCubic: bàn cũ bay sang trái
+  } else sceneCanvas.style.transform = Math.abs(1 - intro.board) < 0.0005 ? '' : `translateX(${((1 - intro.board) * 110).toFixed(2)}%)`;
   const topOff = (1 - intro.hud) * (TOP_BAR_H + 50);
   const bottomOff = (1 - intro.hud) * (BOTTOM_BAR_H + BTN_OVER + 70);
   ctx.save();
@@ -1530,7 +1634,7 @@ function draw(now: number): void {
   ctx.save();
   ctx.globalAlpha = hudA;
   // "Level N" cùng nhãn độ khó (Hard / Very Hard) cạnh bên: cả nhóm căn giữa màn hình nên không tràn ở màn hẹp
-  const lvText = `Level ${index + 1}`;
+  const lvText = `Màn ${index + 1}`;
   const tag = tierTag(LEVELS[index]?.tier);
   ctx.save();
   ctx.translate(w / 2, safeTop + 24);
@@ -1601,6 +1705,7 @@ function draw(now: number): void {
   ctx.restore();
   drawArmedOverlay(now, w, h); // sau cùng nên cả bánh răng cũng bị tối đi
   drawTutorial(now, w, h);
+  drawMagnetFx(now, w, h);
   drawWildStream(now, w, h);
   drawGateBadges(now, w, h);
   drawOutOfMoves(now, w, h);
@@ -1750,7 +1855,7 @@ function drawGateBadges(now: number, w: number, h: number): void {
       const open = gateOpen(state, g, state.turn + 1);
       drawSunMoon(ctx, 0, 0, 12, open);
       // chữ nhỏ chỉ lượt chẵn/lẻ ở dưới huy hiệu
-      K.strokedText(ctx, g.rhythm === 'even' ? 'EVEN' : 'ODD', 0, 27, 11, '#ffffff', '#16345f', 'center', 0.5);
+      K.strokedText(ctx, g.rhythm === 'even' ? 'CHẴN' : 'LẺ', 0, 27, 11, '#ffffff', '#16345f', 'center', 0.5);
     } else drawPadlock(ctx, 0, -2, 22, '#6fc3f0', String(remain));
     ctx.restore();
   }
@@ -1951,7 +2056,7 @@ function drawFeatureIcon(c: CanvasRenderingContext2D, f: Feature, cx: number, cy
  * chứa hình minh hoạ của tính năng sắp tới. `shown` là mức đang hiển thị 0..1; `ready` (đã đầy) thì huy hiệu nhấp nháy nhẹ.
  */
 function drawFeatureBar(c: CanvasRenderingContext2D, x: number, y: number, w: number, shown: number, f: Feature, now: number, ready: boolean): void {
-  K.strokedText(c, 'New Feature', x + 10, y + 10, 19, '#ffffff', '#6b3a1c', 'left', 0.5);
+  K.strokedText(c, 'Tính năng mới', x + 10, y + 10, 19, '#ffffff', '#6b3a1c', 'left', 0.5);
   const bh = 26;
   const by = y + 24;
   const bx = x + 6;
@@ -2008,10 +2113,10 @@ function drawResultModal(now: number, w: number, h: number, modal: ModalState, f
   if (modal.kind === 'mechanic') return drawMechanicModal(now, w, h, modal, fade);
   if (modal.kind === 'continue') return drawContinueModal(now, w, h, modal, fade);
   if (modal.kind === 'fail') return drawFailModal(now, w, h, modal, fade);
-  const label = !modal.last ? 'Next Level' : 'Play Again';
+  const label = !modal.last ? 'Màn tiếp' : 'Chơi lại';
   drawModalFrame(now, w, h, modal, fade, {
-    title: `Level ${modal.lv}`,
-    panelTitle: 'Level Complete!',
+    title: `Màn ${modal.lv}`,
+    panelTitle: 'Hoàn thành!',
     button: { label, press: pressOf('modal:primary') },
     compact: true,
     content: (c, x, y, pw, draw) => {
@@ -2036,9 +2141,9 @@ function drawMechanicModal(now: number, w: number, h: number, modal: ModalState,
   const info = modal.mech ? MECHANICS[modal.mech] : undefined;
   const feat = FEATURES.find((f) => f.kind === 'mechanic' && f.key === modal.mech);
   drawModalFrame(now, w, h, modal, fade, {
-    title: 'New Mechanic!',
+    title: 'Cơ chế mới!',
     panelTitle: info?.name ?? '',
-    button: { label: 'Got it', press: pressOf('modal:primary') },
+    button: { label: 'Đã hiểu', press: pressOf('modal:primary') },
     compact: true,
     content: (c, x, y, pw, draw) => {
       // cùng công thức bố cục với popup booster: hình, khoảng cách, rồi các dòng mô tả cách đều
@@ -2064,9 +2169,9 @@ function drawMechanicModal(now: number, w: number, h: number, modal: ModalState,
 /** Popup mời thêm lượt: "+5 Moves", nút Continue; X (hoặc huỷ) là bỏ cuộc. */
 function drawContinueModal(now: number, w: number, h: number, modal: ModalState, fade: number): void {
   drawModalFrame(now, w, h, modal, fade, {
-    title: 'Continue?',
+    title: 'Chơi tiếp?',
     panelTitle: '',
-    button: { label: 'Continue', press: pressOf('modal:primary') },
+    button: { label: 'Nhận mình gà', press: pressOf('modal:primary') },
     close: { press: pressOf('modal:secondary') },
     compact: true,
     content: (c, x, y, pw, draw) => {
@@ -2076,7 +2181,7 @@ function drawContinueModal(now: number, w: number, h: number, modal: ModalState,
         const big = hgt * 0.78;
         cssText(c, `+${REVIVE_MOVES}`, x + pw / 2, y + hgt * 0.42, big, '#ffd93b', { w: big * 0.045, color: '#a85a00' }, { dy: big * 0.02, color: 'rgba(138,67,0,.45)' });
         const small = hgt * 0.34;
-        cssText(c, 'Moves', x + pw / 2, y + hgt * 0.9, small, '#ffffff', { w: small * 0.07, color: '#2c67c0' }, { dy: small * 0.03, color: 'rgba(32,79,143,.4)' });
+        cssText(c, 'Lượt', x + pw / 2, y + hgt * 0.9, small, '#ffffff', { w: small * 0.07, color: '#2c67c0' }, { dy: small * 0.03, color: 'rgba(32,79,143,.4)' });
       }
       return hgt + 6;
     },
@@ -2086,9 +2191,9 @@ function drawContinueModal(now: number, w: number, h: number, modal: ModalState,
 /** Popup thua: chỉ tiêu đề Fail, trái tim vỡ ở giữa và nút Restart. */
 function drawFailModal(now: number, w: number, h: number, modal: ModalState, fade: number): void {
   drawModalFrame(now, w, h, modal, fade, {
-    title: 'Fail',
+    title: 'Thua',
     panelTitle: '',
-    button: { label: 'Restart', press: pressOf('modal:primary') },
+    button: { label: 'Chơi lại', press: pressOf('modal:primary') },
     compact: true,
     content: (c, x, y, pw, draw) => {
       const side = pw * 0.62;
@@ -2218,7 +2323,7 @@ function drawOutOfMoves(now: number, w: number, h: number): void {
   ctx.fillRect(-20, by + 5, w + 40, bh - 10);
   ctx.fillStyle = 'rgba(255,255,255,.22)';
   ctx.fillRect(-20, by + 5, w + 40, 3);
-  K.strokedText(ctx, 'Out of Moves', w / 2, y + 1, size, '#ffffff', '#6b0f1d', 'center', 0.55);
+  K.strokedText(ctx, 'Hết lượt', w / 2, y + 1, size, '#ffffff', '#6b0f1d', 'center', 0.55);
   ctx.restore();
 }
 
@@ -2367,6 +2472,89 @@ function drawHand(x: number, y: number, alpha: number, press: number): void {
   ctx.restore();
 }
 
+/** Nam châm ở cổng: nảy ra, rung nhẹ khi hút; tia chấm vàng chạy từ khối được chọn về cổng (vẽ đè lên mọi vật cản) rồi mờ đi sau khi khối vào cổng. */
+function drawMagnetFx(now: number, w: number, h: number): void {
+  const m = magnetFx;
+  if (!m || !scene) return;
+  if (now > m.endAt + 250) {
+    magnetFx = null;
+    invalidate();
+    return;
+  }
+  const gp = scene.gateScreen(m.gate.side, m.gate.index, m.gate.depth);
+  const jp = scene.cellScreen(m.from.x, m.from.y);
+  if (!gp) return;
+  const t = now - m.t0;
+  const out = m.endAt === Infinity ? 0 : Math.min(1, Math.max(0, (now - m.endAt) / 250));
+  const pop = easeOutBackIntro(t / 260);
+  const beamOn = m.endAt === Infinity ? Math.min(1, Math.max(0, (t - 150) / 250)) : now < m.endAt - 450 ? 1 : Math.max(0, 1 - (now - (m.endAt - 450)) / 250);
+  const u = cellPx();
+  ctx.save();
+  ctx.globalAlpha = 1 - out;
+  if (jp && beamOn > 0.01) {
+    // luồng gió hút: các vệt gió trắng chạy từ khối về phía nam châm, càng lúc càng nhanh (như bị hút)
+    const dx = gp.x - jp.x;
+    const dy = gp.y - jp.y;
+    const len = Math.hypot(dx, dy) || 1;
+    const nx = -dy / len;
+    const ny = dx / len;
+    const boost = 1 + 2.2 * Math.min(1, t / 1400);
+    const LANES = 7;
+    ctx.save();
+    ctx.lineCap = 'round';
+    ctx.shadowColor = 'rgba(160,210,255,.9)';
+    ctx.shadowBlur = 8;
+    for (let k = 0; k < LANES; k++) {
+      const lane = (k - (LANES - 1) / 2) * 0.1 * u;
+      const speed = (0.0007 + 0.00018 * ((k * 5) % 4)) * boost;
+      const s0 = (((k * 0.37 + t * speed) % 1) + 1) % 1;
+      const tail = 0.16 + 0.05 * (k % 3);
+      const a0 = Math.max(0, s0 - tail);
+      const env = Math.sin(Math.PI * s0);
+      const sway = (r: number): number => Math.sin(r * 7 + k * 1.7 + t / 160) * 0.05 * u;
+      ctx.beginPath();
+      const STEPS = 6;
+      for (let q = 0; q <= STEPS; q++) {
+        const r = a0 + ((s0 - a0) * q) / STEPS;
+        const off = lane + sway(r);
+        const px = jp.x + dx * r + nx * off;
+        const py = jp.y + dy * r + ny * off;
+        if (q === 0) ctx.moveTo(px, py);
+        else ctx.lineTo(px, py);
+      }
+      ctx.strokeStyle = `rgba(255,255,255,${(0.85 * env * beamOn).toFixed(3)})`;
+      ctx.lineWidth = 2 + (k % 3);
+      ctx.stroke();
+    }
+    ctx.restore();
+    // vòng hút thu nhỏ dần về phía nam châm
+    ctx.save();
+    ctx.strokeStyle = 'rgba(255,255,255,.75)';
+    ctx.lineWidth = 3;
+    for (let k = 0; k < 2; k++) {
+      const r = ((t / 520 + k * 0.5) % 1);
+      ctx.globalAlpha *= 1;
+      ctx.save();
+      ctx.globalAlpha = (1 - out) * beamOn * Math.sin(Math.PI * r) * 0.8;
+      ctx.beginPath();
+      ctx.arc(gp.x, gp.y, u * (0.95 - 0.7 * r), 0, Math.PI * 2);
+      ctx.stroke();
+      ctx.restore();
+    }
+    ctx.restore();
+  }
+  // nam châm: to dần bằng easeOutBack, rung nhẹ trong lúc hút
+  const jitter = beamOn > 0.05 && out === 0 ? Math.sin(now / 28) * 1.6 : 0;
+  // nam châm nằm ngay trên cửa; cửa sát mép màn hình thì dịch vào vừa đủ để không bị cắt
+  const half = u * 0.5;
+  const mx = Math.min(w - half - 4, Math.max(half + 4, gp.x));
+  const my = Math.min(h - half - 4, Math.max(half + 4, gp.y));
+  ctx.translate(mx + jitter, my);
+  ctx.scale(Math.max(0, pop), Math.max(0, pop));
+  drawBoosterIcon(ctx, 'magnet', 0, 0, u * 0.5);
+  ctx.restore();
+}
+
 /** Khung chữ hướng dẫn ở đầu màn hình và bàn tay chỉ (cú vuốt, kéo ngược hoặc chạm). Mọi thứ hiện/tắt theo `tutAmt`. */
 function drawTutorial(now: number, w: number, h: number): void {
   const st = tutShow;
@@ -2379,17 +2567,23 @@ function drawTutorial(now: number, w: number, h: number): void {
   // chữ hướng dẫn (đã có biểu ngữ riêng khi booster đang chờ chọn mục tiêu)
   const textA = A * (1 - armAmt);
   if (textA > 0.002) {
-    const text = st.kind === 'booster' ? `Tap ${defOf(st.key).name}!` : st.text;
+    const text = st.kind === 'booster' ? `Chạm ${defOf(st.key).name}!` : st.text;
     const nudge = Math.max(0, 1 - (now - tutNudgeT) / 380);
     const pop = 1 + 0.12 * Math.sin(nudge * Math.PI * 3) * nudge;
     ctx.save();
     ctx.globalAlpha = textA;
-    ctx.font = K.font(30);
-    const lines = wrapLines(text, w - 48);
+    let tutSize = 30;
+    ctx.font = K.font(tutSize);
+    let lines = wrapLines(text, w - 48);
+    if (lines.length > 2) {
+      tutSize = 25;
+      ctx.font = K.font(tutSize);
+      lines = wrapLines(text, w - 48);
+    }
     const cy = Math.max(safeTop + 62, TOP_BAR_H * 0.5 + 14);
     ctx.translate(w / 2, cy);
     ctx.scale(pop, pop);
-    lines.forEach((ln, i) => K.strokedText(ctx, ln, 0, (i - (lines.length - 1) / 2) * 36, 30, '#ffffff', '#204f8f', 'center', 0.5));
+    lines.forEach((ln, i) => K.strokedText(ctx, ln, 0, (i - (lines.length - 1) / 2) * (tutSize + 6), tutSize, '#ffffff', '#204f8f', 'center', 0.5));
     ctx.restore();
   }
   // bàn tay
@@ -2518,19 +2712,20 @@ function drawBoosterModal(now: number, w: number, h: number, m: ModalState, fade
   const def = defOf(key);
   const isNew = m.kind === 'new';
   drawModalFrame(now, w, h, m, fade, {
-    title: isNew ? 'New Booster!' : 'Buy Booster',
-    panelTitle: isNew ? `${def.name} · You got ×${UNLOCK_GIFT}!` : def.name,
-    compact: !isNew,
+    title: isNew ? 'Vật phẩm mới!' : 'Mua vật phẩm',
+    panelTitle: def.name,
+    compact: true,
     bigPanelTitle: !isNew,
-    button: { label: isNew ? 'Claim' : m.busy ? 'Loading…' : 'Watch ad +1', press: pressOf('modal:primary') },
+    button: { label: isNew ? 'Tiếp tục' : m.busy ? 'Đang tải…' : 'Nhận mình gà +1', press: pressOf('modal:primary') },
     close: isNew ? undefined : { press: pressOf('modal:secondary') },
     content: (c, x, y, pw, draw) => {
-      const slot = pw * (isNew ? 0.28 : 0.24);
+      const slot = pw * 0.24;
       c.save();
       c.font = K.font(16);
       const lines = wrapLines(isNew ? def.desc : m.note ?? def.desc, pw);
       c.restore();
-      const lineH = 20;
+      const lineH = isNew ? 21 : 20;
+      const gap = isNew ? 12 : 16; // popup giới thiệu: cùng nhịp với popup cơ chế mới
       if (draw) {
         // chỉ biểu tượng gốc, không có ô/khung xanh phía sau
         drawBoosterIcon(c, key, x + pw / 2, y + slot / 2, slot * 0.58);
@@ -2538,9 +2733,9 @@ function drawBoosterModal(now: number, w: number, h: number, m: ModalState, fade
         c.font = K.font(16);
         c.textAlign = 'center';
         c.textBaseline = 'middle';
-        lines.forEach((ln, i) => c.fillText(ln, x + pw / 2, y + slot + 16 + lineH / 2 + i * lineH));
+        lines.forEach((ln, i) => c.fillText(ln, x + pw / 2, y + slot + gap + lineH / 2 + i * lineH));
       }
-      return slot + 5 + 16 + lines.length * lineH;
+      return slot + (isNew ? 6 : 5) + gap + lines.length * lineH;
     },
   });
 }
@@ -2617,6 +2812,20 @@ function drawWildStream(now: number, w: number, h: number): void {
   ctx.restore();
 }
 
+/** Thạch rung nhẹ khi đứng yên: nhún lên xuống và lắc ngang hơi lệch pha, mỗi khối một pha riêng. Tắt khi người dùng chọn giảm chuyển động. */
+const WOBBLE_ON = !(typeof matchMedia === 'function' && matchMedia('(prefers-reduced-motion: reduce)').matches);
+function idleWobble(id: string, now: number): { sx: number; sy: number; sz: number } {
+  if (!WOBBLE_ON) return { sx: 1, sy: 1, sz: 1 };
+  let h = 0;
+  for (let i = 0; i < id.length; i++) h = (h * 31 + id.charCodeAt(i)) % 628;
+  const ph = h / 100;
+  const t = now / 1000;
+  const a = 0.022 * Math.sin(t * 2.6 + ph);
+  const b = 0.012 * Math.sin(t * 3.4 + ph * 1.7);
+  return { sx: 1 - a * 0.6 + b, sy: 1 + a, sz: 1 - a * 0.6 - b };
+}
+let wobbleTimer = 0;
+
 function frame(): void {
   raf = 0;
   const now = performance.now();
@@ -2634,6 +2843,8 @@ function frame(): void {
     anim = null;
     if (done.impact) {
       impacts.push({ id: done.id, dx: done.dirV.x, dy: done.dirV.y, t0: now, amp: done.impact.amp, kind: 'hit' });
+      for (const be of done.impact.bumpExtra ?? []) impacts.push({ id: be.id, dx: done.dirV.x, dy: done.dirV.y, t0: now + be.delay, amp: be.amp, kind: 'bump' });
+      for (const bc of done.impact.bumpCells ?? []) impacts.push({ id: `trail:${bc.x},${bc.y}`, dx: done.dirV.x, dy: done.dirV.y, t0: now + bc.delay, amp: bc.amp, kind: 'bump' });
       if (done.impact.bumpId) impacts.push({ id: done.impact.bumpId, dx: done.dirV.x, dy: done.dirV.y, t0: now, amp: done.impact.amp * 0.9, kind: 'bump' });
     }
     draw(now);
@@ -2641,7 +2852,14 @@ function frame(): void {
   } else {
     draw(now);
   }
-  if (introActive(now) || anim || fx || wildFx || armed || armAmt !== 0 || tutAmt !== 0 || tutCur() || uiBusy || (modalOut && now - modalOut.t0 < MODAL_OUT_MS) || pushAnims.size || pinBusy || pinDying.length || (toast && now < toast.until) || dissolves.length || trailBusy || scene?.animating() || shake || drag || (modal && (modal.kind === 'win' || now - modal.t0 < 400)) || now - menu.t0 < 700 || impacts.length > 0 || (ended && now - endedAt < 1200) || loseBanner || winShow || confetti.active || impactFx.active) invalidate();
+  if (introActive(now) || anim || fx || wildFx || armed || armAmt !== 0 || tutAmt !== 0 || tutCur() || uiBusy || (modalOut && now - modalOut.t0 < MODAL_OUT_MS) || pushAnims.size || pinBusy || pinDying.length || (toast && now < toast.until) || dissolves.length || trailBusy || scene?.animating() || shake || drag || (modal && (modal.kind === 'win' || now - modal.t0 < 400)) || now - menu.t0 < 700 || impacts.length > 0 || (ended && now - endedAt < 1200) || loseBanner || winShow || boardExit || magnetFx || confetti.active || impactFx.active) invalidate();
+  else if (WOBBLE_ON && !wobbleTimer && !modal && !document.hidden && state && status(state) === 'playing') {
+    // chỉ còn thạch rung nhẹ: vẽ khoảng 24 khung/giây cho nhẹ máy
+    wobbleTimer = window.setTimeout(() => {
+      wobbleTimer = 0;
+      invalidate();
+    }, 41);
+  }
 }
 
 function invalidate(): void {
@@ -2666,6 +2884,7 @@ interface HudButton {
 
 function buttonAt(x: number, y: number): HudButton | null {
   if (introActive()) return null;
+  if ((newQueue.length || pendingMech) && !modal) return null; // popup giới thiệu sắp hiện: chưa nhận thao tác nào
   if ((loseBanner || winShow) && !modal) return null; // chữ "Out of Moves" / logo thắng đang chạy: chưa nhận bấm
   const w = canvas.clientWidth;
   const h = canvas.clientHeight;
@@ -2837,7 +3056,7 @@ export const game: FalconGame = {
   },
 };
 
-// Font chữ nhúng sẵn; tải xong thì vẽ lại để chữ đổi từ font dự phòng sang Lilita One.
+// Font chữ nhúng sẵn; tải xong thì vẽ lại để chữ đổi từ font dự phòng sang Nunito.
 void loadFonts().then(() => invalidate());
 
 
@@ -2859,4 +3078,5 @@ if (import.meta.env.DEV) {
   };
 }
 if (import.meta.env.DEV) (window as unknown as { __audio?: { play: typeof play; renderStats: typeof renderStats; renderAll: typeof renderAllStats; renderMusic: typeof renderMusicStats } }).__audio = { play, renderStats, renderAll: renderAllStats, renderMusic: renderMusicStats };
+if (import.meta.env.DEV) (window as unknown as { __stats?: () => unknown }).__stats = () => scene?.stats();
 if (import.meta.env.DEV) (window as unknown as { __dropCell?: (x: number, y: number) => { x: number; y: number } | null }).__dropCell = (x, y) => scene?.cellScreen(x, y) ?? null;

@@ -13,7 +13,7 @@ export interface LevelEntry {
   helps?: BoosterKey;
   /** Lời giải của solver (kể cả booster), nguồn cho các bước hướng dẫn. */
   solution?: Move[];
-  tutorial?: { moves: string[]; intro?: string; undoDemo?: boolean };
+  tutorial?: { moves: string[]; intro?: string; undoDemo?: boolean; steps?: string[] };
   unlocks?: BoosterKey;
   /** Mechanic được giới thiệu ở level này bằng một popup. */
   introduces?: string;

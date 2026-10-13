@@ -112,6 +112,11 @@ export interface SlideRecord {
   /** Lượt (nước đi số mấy) mà cú trượt này được thực hiện; cũng là `turn` của vệt nó tạo ra. */
   turn: number;
   from: Pos;
+  /** Hướng phải kéo để quay lại theo đúng đường vừa đi (đi ngược ô liền trước trên đường đi). Có khi cú trượt qua ô mũi tên hoặc cổng dịch chuyển, lúc đó không phải hướng thẳng về ô xuất phát. */
+  back?: Dir;
+  /** Đường đi của cú trượt (chỉ có khi level có ô đặc biệt) và chỉ số các đoạn dịch chuyển: để hoàn tác đi ngược lại đúng đường đó. */
+  path?: Pos[];
+  jumps?: number[];
 }
 
 /** Vì sao một cú trượt dừng: mép bàn, khối đá, khối khác, hoặc vệt còn sống. */
@@ -202,9 +207,10 @@ function blockerAt(state: State, self: string, x: number, y: number): 'wall' | '
   const { level } = state;
   if (level.walls.some((w) => w.x === x && w.y === y)) return 'wall';
   const move = state.turn + 1;
-  if (state.trails.some((t) => t.x === x && t.y === y && trailLeft(state, t) > 0)) return 'trail';
   if ((state.pins ?? []).some((t) => t.x === x && t.y === y)) return 'wall';
+  // thân khối đứng trên ô có vệt của nó: tính là bị KHỐI chặn, không phải phanh bằng vệt
   if (Object.entries(state.balls).some(([id, p]) => id !== self && p.x === x && p.y === y)) return 'ball';
+  if (state.trails.some((t) => t.x === x && t.y === y && trailLeft(state, t) > 0)) return 'trail';
   return null;
 }
 
@@ -246,6 +252,7 @@ export function slide(state: State, id: string, dir: Dir): MoveResult {
   const made: Trail[] = [{ x: from.x, y: from.y, turn: move, owner: id, k }];
   let { x, y } = from;
   let stop: StopReason;
+  let blockedAt: Pos | null = null; // ô thực sự đã chặn cú trượt (ô kế tiếp, hoặc ô ra của cổng dịch chuyển)
   const special = hasSpecialCells(state.level);
   let dd = d;
   const path: Pos[] = [{ x, y }];
@@ -261,6 +268,7 @@ export function slide(state: State, id: string, dir: Dir): MoveResult {
     const blocker = blockerAt(state, id, nx, ny);
     if (blocker) {
       stop = blocker;
+      blockedAt = { x: nx, y: ny };
       break;
     }
     x = nx;
@@ -280,6 +288,7 @@ export function slide(state: State, id: string, dir: Dir): MoveResult {
       const jb = blockerAt(state, id, portal.x, portal.y);
       if (jb) {
         stop = jb; // ô ra đang bị chặn: dừng lại tại ô vào
+        blockedAt = { x: portal.x, y: portal.y };
         break;
       }
       jumps.push(path.length - 1);
@@ -289,7 +298,14 @@ export function slide(state: State, id: string, dir: Dir): MoveResult {
       path.push({ x, y });
     }
     const arrow = state.level.arrows?.find((q) => q.x === x && q.y === y);
-    if (arrow) dd = DELTA[arrow.dir];
+    if (arrow) {
+      // mũi tên ngược chiều đang đi: bị chặn ngay, thạch dừng trên ô mũi tên
+      if (DELTA[arrow.dir].x === -dd.x && DELTA[arrow.dir].y === -dd.y) {
+        stop = 'wall';
+        break;
+      }
+      dd = DELTA[arrow.dir];
+    }
     if (state.level.sticky?.some((q) => q.x === x && q.y === y)) {
       stop = 'sticky';
       break;
@@ -302,8 +318,8 @@ export function slide(state: State, id: string, dir: Dir): MoveResult {
   // dừng sát một khối đang đóng băng: băng vỡ
   let thawed: string | undefined;
   if (stop === 'ball' && !exit) {
-    const bx = x + dd.x;
-    const by = y + dd.y;
+    const bx = blockedAt ? blockedAt.x : x + dd.x;
+    const by = blockedAt ? blockedAt.y : y + dd.y;
     thawed = Object.entries(state.balls).find(([bid, q]) => bid !== id && q.x === bx && q.y === by && state.frozen?.includes(bid))?.[0];
   }
   const own = new Set([move, ...(state.history[id] ?? []).map((r) => r.turn)]);
@@ -322,7 +338,16 @@ export function slide(state: State, id: string, dir: Dir): MoveResult {
   } else {
     balls[id] = { x, y };
   }
-  const history = { ...state.history, [id]: [...(state.history[id] ?? []), { turn: move, from: { ...from } }] };
+  // hướng kéo ngược theo đường vừa đi: mặc định ngược hướng trượt; nếu đường có mũi tên / cổng dịch chuyển thì quay về ô liền trước ngay sát ô cuối
+  const opp: Record<Dir, Dir> = { up: 'down', down: 'up', left: 'right', right: 'left' };
+  let back: Dir = opp[dir];
+  if (special && path.length >= 2) {
+    const pa = path[path.length - 2];
+    const pb = path[path.length - 1];
+    if (Math.abs(pa.x - pb.x) + Math.abs(pa.y - pb.y) === 1) back = pa.x < pb.x ? 'left' : pa.x > pb.x ? 'right' : pa.y < pb.y ? 'up' : 'down';
+    else back = opp[dd === DELTA.up ? 'up' : dd === DELTA.down ? 'down' : dd === DELTA.left ? 'left' : 'right']; // ô liền trước cách xa (vừa qua cổng dịch chuyển): ngược hướng đang đi
+  }
+  const history = { ...state.history, [id]: [...(state.history[id] ?? []), { turn: move, from: { ...from }, back, ...(special ? { path: path.map((p) => ({ ...p })), jumps: [...jumps] } : {}) }] };
   const pins = state.pins ?? [];
   const wild = gate?.wild ? state.wild.filter((w) => !sameGate(w, gate)) : (state.wild ?? []);
   const frozen = thawed ? (state.frozen ?? []).filter((q) => q !== thawed) : state.frozen;
@@ -379,6 +404,7 @@ export function undoDir(state: State, id: string): Dir | null {
   const last = stack[stack.length - 1];
   const pos = state.balls[id];
   if (!last || !pos || !canUndoRecord(state, id, last)) return null;
+  if (last.back) return last.back;
   if (last.from.x !== pos.x) return last.from.x > pos.x ? 'right' : 'left';
   if (last.from.y !== pos.y) return last.from.y > pos.y ? 'down' : 'up';
   return null;
@@ -419,10 +445,19 @@ function eject(state: State, id: string): State {
   return { ...state, balls, out: [...state.out, id], trails: clear ? state.trails.filter((t) => !own.has(t.turn)) : state.trails };
 }
 
+/** Ô đặt pin được: ô trống và không phải ô của cổng (pin đặt lên ô cổng sẽ khoá cổng đó vĩnh viễn). */
+export function isPinnable(state: State, x: number, y: number): boolean {
+  if (!isEmptyCell(state, x, y)) return false;
+  return !state.level.gates.some((g) => {
+    const c = gateCell(state.level, g);
+    return c.x === x && c.y === y;
+  });
+}
+
 /** Pin: đặt một khối vĩnh viễn lên một ô trống (chặn như khối đá cho tới hết level). */
 export function placePin(state: State, x: number, y: number): BoosterResult {
   if (status(state) !== 'playing') return { ok: false, reason: 'not-playing' };
-  if (!isEmptyCell(state, x, y)) return { ok: false, reason: 'not-empty' };
+  if (!isPinnable(state, x, y)) return { ok: false, reason: 'not-empty' };
   return { ok: true, state: { ...state, pins: [...(state.pins ?? []), { x, y, turn: state.turn }] }, moved: [] };
 }
 

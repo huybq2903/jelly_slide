@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest';
-import { axisAllows, createState, gateOpen, isEmptyCell, magnetGate, placeBomb, slide, status, undo, undoDir, validateLevel, type Level } from './rules';
+import { axisAllows, createState, gateOpen, isEmptyCell, isPinnable, placePin, magnetGate, placeBomb, slide, status, undo, undoDir, validateLevel, type Level } from './rules';
 
 const base: Level = {
   width: 5,
@@ -517,6 +517,35 @@ describe('ô đặc biệt', () => {
     expect(blocked.to).toEqual({ x: 4, y: 0 }); // ra tới ô ra nhưng bị đá chắn tiếp: dừng ở ô ra
     const exitBlocked = go(mk({ portals: [{ a: { x: 2, y: 2 }, b: { x: 4, y: 0 } }], balls: [{ id: 'A', color: 'pink', x: 0, y: 2 }, { id: 'B', color: 'teal', x: 4, y: 0 }] as Level['balls'], gates: [{ color: 'pink', side: 'down', index: 5 }, { color: 'teal', side: 'up', index: 4 }] }), 'right');
     expect(exitBlocked.to).toEqual({ x: 2, y: 2 }); // ô ra có khối khác: dừng tại ô vào
+  });
+
+  it('hoàn tác sau ô mũi tên / cổng dịch chuyển: kéo ngược theo đường vừa đi (ô liền trước), không phải hướng thẳng về ô xuất phát', () => {
+    const lv = mk({ arrows: [{ x: 2, y: 2, dir: 'down' }] });
+    const r = go(lv, 'right');
+    expect(r.to).toEqual({ x: 2, y: 4 });
+    expect(undoDir(r.state, 'A')).toBe('up'); // trước là ô (2,3) phía trên, dù ô xuất phát (0,2) nằm bên trái
+    const u = undo(r.state, 'A');
+    expect(u.ok && u.state.balls.A).toEqual({ x: 0, y: 2 });
+    const lp = mk({ portals: [{ a: { x: 2, y: 2 }, b: { x: 4, y: 0 } }] }, { x: 2, y: 0 });
+    const rp = go(lp, 'down');
+    expect(rp.to).toEqual({ x: 4, y: 4 });
+    expect(undoDir(rp.state, 'A')).toBe('up'); // đi xuống cột 4 sau cổng, nên kéo ngược là lên
+    const up = undo(rp.state, 'A');
+    expect(up.ok && up.state.balls.A).toEqual({ x: 2, y: 0 });
+  });
+
+  it('ô mũi tên ngược chiều đang đi: thạch dừng trên ô mũi tên', () => {
+    const lv = mk({ arrows: [{ x: 2, y: 2, dir: 'left' }] });
+    const r = go(lv, 'right');
+    expect(r.to).toEqual({ x: 2, y: 2 });
+  });
+
+  it('pin không đặt được lên ô của cổng (tránh tự khoá cổng)', () => {
+    const lv = mk({ gates: [{ color: 'pink', side: 'down', index: 3 }] });
+    expect(isEmptyCell(createState(lv), 3, 4)).toBe(true);
+    expect(isPinnable(createState(lv), 3, 4)).toBe(false);
+    expect(placePin(createState(lv), 3, 4).ok).toBe(false);
+    expect(placePin(createState(lv), 3, 3).ok).toBe(true);
   });
 
   it('vòng lặp mũi tên không treo: dừng lại', () => {

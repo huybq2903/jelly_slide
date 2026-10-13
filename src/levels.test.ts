@@ -1,7 +1,7 @@
 import { describe, expect, it } from 'vitest';
 import { CAMPAIGN } from './core/campaign';
 import { validateLevel } from './core/rules';
-import { featuresUsed, solve } from './core/solver';
+import { arrowsTouched, brakeOwnership, featuresUsed, solve } from './core/solver';
 import { LEVELS } from './levels';
 
 describe('bộ level đã sinh sẵn', () => {
@@ -38,9 +38,9 @@ describe('bộ level đã sinh sẵn', () => {
   it('thang lượt dư: khó dư 1–2 lượt, siêu khó dư đúng 1, không level nào buộc booster', () => {
     LEVELS.forEach(({ level, minMoves, tier }, i) => {
       const slack = level.maxMoves - minMoves;
-      if (tier === 'super') expect(slack, `level ${i + 1} siêu khó`).toBe(1);
-      if (tier === 'hard') expect(slack, `level ${i + 1} khó`).toBeGreaterThanOrEqual(1);
-      if (tier === 'hard') expect(slack, `level ${i + 1} khó`).toBeLessThanOrEqual(2);
+      if (tier === 'super') expect(slack, `level ${i + 1} siêu khó`).toBe(2);
+      if (tier === 'hard') expect(slack, `level ${i + 1} khó`).toBeGreaterThanOrEqual(2);
+      if (tier === 'hard') expect(slack, `level ${i + 1} khó`).toBeLessThanOrEqual(3);
     });
   });
 
@@ -54,19 +54,32 @@ describe('bộ level đã sinh sẵn', () => {
     LEVELS.forEach(({ level }, i) => expect(level.balls.length, `level ${i + 1}`).toBe(i < 4 ? 1 : i < 15 ? 2 : 3));
   });
 
-  it('level 5 (khó, hai khối đầu tiên) bắt buộc cả phanh bằng vệt lẫn hoàn tác và có hướng dẫn', () => {
+  it('mọi ô mũi tên đều được lời giải đi qua (không có ô thừa)', () => {
+    LEVELS.forEach(({ level, solution }, i) => {
+      const n = level.arrows?.length ?? 0;
+      if (n) expect(arrowsTouched(level, solution!), `level ${i + 1}`).toBe(n);
+    });
+  });
+
+  it('level 5 (khó, hai khối đầu tiên): lời giải tối ưu phanh nhờ vệt của khối KHÁC, không cần hoàn tác, có hướng dẫn', () => {
     expect(LEVELS[4].tier).toBe('hard');
     expect(LEVELS[4].level.balls.length).toBe(2);
     expect(LEVELS[4].needs?.brake).toBe(true);
-    expect(LEVELS[4].needs?.undo).toBe(true);
+    expect(LEVELS[4].needs?.undo).toBe(false);
     expect(LEVELS[4].tutorial).toBeDefined();
+    const own = brakeOwnership(LEVELS[4].level, LEVELS[4].solution!);
+    expect(own.other).toBeGreaterThanOrEqual(1);
+    expect(own.own).toBe(0);
+    expect(LEVELS[4].level.maxMoves - LEVELS[4].minMoves).toBe(3);
+    // phanh phải là vệt trống (không có thân khối nằm đó): rules báo 'trail' chỉ khi ô chặn không có khối
   });
 
-  it('level 4 giống độ khó level 3 và không có hướng dẫn', () => {
-    expect(LEVELS[3].tutorial).toBeUndefined();
-    expect(LEVELS[3].minMoves).toBe(LEVELS[2].minMoves);
-    expect(LEVELS[3].level.maxMoves - LEVELS[3].minMoves).toBe(LEVELS[2].level.maxMoves - LEVELS[2].minMoves);
-    expect(LEVELS[3].needs).toEqual({ brake: false, undo: false });
+  it('level 4 là màn dạy hoàn tác: 1 khối, dễ, có tut ép (vuốt, kéo ngược hoàn tác, đi lại) và đủ lượt dư để hoàn tác', () => {
+    const e = LEVELS[3];
+    expect(e.tutorial?.undoDemo).toBe(true);
+    expect(e.level.balls.length).toBe(1);
+    expect(e.tier).toBe('easy');
+    expect(e.level.maxMoves - e.minMoves).toBeGreaterThanOrEqual(2); // một lần nhầm + hoàn tác tốn 2 lượt
   });
 
   it('nhịp khó: L5/15/25/35/45 khó, L10/20/30/40/50 siêu khó', () => {

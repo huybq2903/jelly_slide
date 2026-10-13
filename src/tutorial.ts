@@ -16,26 +16,44 @@ export function buildTutorial(entry: LevelEntry): TutStep[] | null {
   if (!entry.solution?.length) return null;
   let moves: Move[] = entry.solution;
   if (entry.tutorial.undoDemo) {
+    // sau nước đúng đầu tiên: một nước SAI dẫn vào ngõ cụt (khối không còn cú trượt nào, vệt của chính nó chặn đường về), rồi lùi lại
     const first = moves[0];
-    if (first?.kind === 'slide') moves = [first, { kind: 'undo', id: first.id }, ...moves];
+    if (first?.kind === 'slide') {
+      const r1 = applyMove(createState(entry.level), first);
+      if (!r1.ok) return null;
+      const s1 = r1.state;
+      const stuck = (st: typeof s1): boolean => (['up', 'down', 'left', 'right'] as Dir[]).every((d) => !applyMove(st, { kind: 'slide', id: first.id, dir: d }).ok);
+      const wrong = (['up', 'down', 'left', 'right'] as Dir[])
+        .map((d): Move => ({ kind: 'slide', id: first.id, dir: d }))
+        .find((m) => {
+          if (m.kind === 'slide' && moves[1]?.kind === 'slide' && m.dir === moves[1].dir) return false;
+          const r = applyMove(s1, m);
+          return r.ok && !(r as { exit?: Dir }).exit && stuck(r.state);
+        });
+      if (!wrong) return null;
+      moves = [first, wrong, { kind: 'undo', id: first.id }, ...moves.slice(1)];
+    }
   }
   let state = createState(entry.level);
   const steps: TutStep[] = [];
   let firstSlide = true;
   let afterUndo = false;
   let slideIdx = 0;
+  let stepIdx = 0;
+  const perStep = entry.tutorial.steps;
   for (const m of moves) {
+    const override = perStep?.[stepIdx++];
     if (m.kind === 'undo') {
       afterUndo = true;
       const dir = undoDir(state, m.id);
       if (!dir) return null;
-      steps.push({ kind: 'undo', id: m.id, dir, from: { ...state.balls[m.id] }, text: 'Stuck? Drag back along the trail to undo!' });
+      steps.push({ kind: 'undo', id: m.id, dir, from: { ...state.balls[m.id] }, text: override ?? (entry.tutorial.undoDemo ? 'Đi nhầm rồi! Vòng sáng là điểm gốc: kéo thạch về đó để lùi lại (tốn 1 lượt)!' : 'Vòng sáng là điểm gốc: kéo thạch về đó để lùi lại (tốn 1 lượt)!') });
     } else if (m.kind === 'slide') {
       const r = applyMove(state, m);
       if (!r.ok) return null;
       const res = r as { exit?: Dir; stop?: string; to?: Pos };
       const custom = entry.tutorial.moves[slideIdx++] as string | undefined;
-      const text = custom ?? (afterUndo ? 'Now try again!' : firstSlide ? 'Swipe the jelly toward its gate!' : res.exit ? 'Slide into the gate!' : res.stop === 'trail' ? 'The trail stops you. Nice brake!' : 'Swipe to slide!');
+      const text = override ?? custom ?? (afterUndo ? 'Thử lại nào!' : firstSlide ? 'Vuốt thạch về phía cổng của nó!' : res.exit ? 'Trượt vào cổng!' : res.stop === 'trail' ? 'Vệt chặn bạn lại. Phanh đẹp!' : 'Vuốt để trượt!');
       firstSlide = false;
       afterUndo = false;
       const from = { ...state.balls[m.id] };

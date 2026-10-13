@@ -9,6 +9,11 @@ const entries = [];
 for (let i = 0; i < CAMPAIGN.length; i++) {
   const e = CAMPAIGN[i];
   let g = null;
+  if (e.fixed) {
+    const sol0 = solve(e.fixed);
+    if (!sol0) throw new Error(`Level vẽ tay ${i + 1} không có lời giải`);
+    g = { level: e.fixed, minMoves: sol0.moves.length, needs: { brake: false, undo: false }, boosterSolution: e.unlocks ? solve(e.fixed, { boosters: { [e.unlocks]: 1 } })?.moves : undefined, helps: e.unlocks } as unknown as ReturnType<typeof generateLevels>[number];
+  }
   for (let k = 0; k < 6 && !g; k++) [g] = generateLevels(e.spec, 1, e.seed + k * 1000, 6000);
   if (!g) throw new Error(`Không sinh được level ${i + 1}: ${e.concept}`);
   // lời giải mẫu: có booster giúp thì dùng lời giải có booster (cho hướng dẫn), không thì lời giải thường

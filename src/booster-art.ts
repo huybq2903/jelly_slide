@@ -366,7 +366,7 @@ export function drawBoosterSlot(ctx: CanvasRenderingContext2D, cx: number, cy: n
   if (st.lock > 0.001) {
     ctx.globalAlpha = baseAlpha * st.lock;
     drawLockedSlot(ctx, cx, cy, r, st.press);
-    strokedText(ctx, `Lv ${st.unlock}`, cx, cy + r + 21, 14, '#ffffff', '#102a6c');
+    strokedText(ctx, `Màn ${st.unlock}`, cx, cy + r + 21, 14, '#ffffff', '#102a6c');
   }
   if (st.lock < 0.999) {
     ctx.globalAlpha = baseAlpha * (1 - st.lock);

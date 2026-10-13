@@ -21,6 +21,7 @@ import {
   OrthographicCamera,
   MeshPhysicalMaterial,
   MeshStandardMaterial,
+  BackSide,
   DoubleSide,
   PCFSoftShadowMap,
   PerspectiveCamera,
@@ -46,6 +47,7 @@ import {
   Path,
 } from 'three';
 import { RoundedBoxGeometry } from 'three/examples/jsm/geometries/RoundedBoxGeometry.js';
+import { mergeGeometries } from 'three/examples/jsm/utils/BufferGeometryUtils.js';
 import { gateCell, gateKey, inBoard, type Dir, type Level } from './core/rules';
 import { COLOR_HEX } from './render';
 import { cellToWorld, fitView, pickBox, screenToCell, worldToScreen, type Rect, type View } from './view3d';
@@ -64,12 +66,22 @@ interface Unravel {
 const noUnravel = (): Unravel => ({ uT: { value: 0 }, uDir: { value: new Vector3() }, uDist: { value: 0 }, uFly: { value: 0 }, uSeq: { value: 0 }, uOrd: { value: new Vector3() }, uFace: { value: [0, 0, 0, 0, 0] } });
 
 /** Vật liệu thạch: bán trong suốt, bóng ướt (clearcoat), phát sáng nhẹ cùng màu để ruột thạch ánh lên. */
+/** Viền hoạt hình: vật liệu cho vỏ lộn ngược, đẩy các đỉnh ra theo pháp tuyến `thick` (đơn vị ô); màu xanh đen pha chút tông của vật. */
+function rimMaterial(hex: string, thick: number): MeshBasicMaterial {
+  const m = new MeshBasicMaterial({ color: new Color('#100e2c').lerp(new Color(hex), 0.1), side: BackSide, transparent: true, opacity: 1 });
+  m.onBeforeCompile = (sh) => {
+    sh.vertexShader = sh.vertexShader.replace('#include <begin_vertex>', `#include <begin_vertex>
+  transformed += normalize(normal) * ${thick.toFixed(3)};`);
+  };
+  return m;
+}
+
 function jellyMaterial(hex: string, opacity = 0.8): MeshPhysicalMaterial {
   return new MeshPhysicalMaterial({
     color: hex,
     emissive: hex,
-    emissiveIntensity: 0.22,
-    roughness: 0.14,
+    emissiveIntensity: 0.12,
+    roughness: 0.07,
     metalness: 0,
     clearcoat: 1,
     clearcoatRoughness: 0.06,
@@ -127,6 +139,8 @@ export interface TrailDesc {
   grow: number;
   /** 0..1: chuyển từ đan đặc sang đan lỏng (các mũi nhỏ co lại, các mũi to nở ra). */
   loosen: number;
+  /** Nảy khi bị khối đâm vào: co giãn theo trục và lệch vị trí (đơn vị ô). */
+  pose?: { sx: number; sy: number; sz: number; ox: number; oy: number };
 }
 
 export interface GateDesc {
@@ -193,12 +207,17 @@ export interface SceneDesc {
   focus: FocusDesc | null;
   threads: { color: string; /** 0..1: tiến độ tuột của phần chỉ nằm trên các ô hết hạn. */ unravel: number; pts: { x: number; y: number; tight: boolean; dying?: boolean }[] }[];
   ghost: { x: number; y: number; color: string } | null;
+  /** Điểm hoàn tác của từng khối (ô khối sẽ quay về khi kéo ngược theo vệt). */
+  undoMarks?: { x: number; y: number; color: string; /** Đang được hướng dẫn: vòng sáng lớn nhấp nháy. */ hot?: boolean }[];
   line: { from: { x: number; y: number }; to: { x: number; y: number }; /** Đường gấp khúc (khi có mũi tên/cổng dịch chuyển) và chỉ số các đoạn dịch chuyển (không vẽ chấm). */ path?: { x: number; y: number }[]; jumps?: number[] } | null;
 }
 
 // ---------- Hằng số kích thước (đơn vị: ô) ----------
 
 const WHITE = new Color('#ffffff');
+const TMP_HEX = new Color();
+const BLACK = new Color('#000000');
+
 const TILE_TOP = 0.04; // mặt trên của ô nền; mọi thứ đặt lên đây
 const BALL = { w: 0.96, h: 0.84 }; // khối gần đầy ô, khe giữa các khối rất mỏng
 const WALL_H = 0.5; // tường cúc áo cao như một khối nỉ
@@ -216,6 +235,8 @@ interface BallObj {
   group: Group;
   body: MeshPhysicalMaterial;
   core: MeshStandardMaterial;
+  /** Viền hoạt hình đen xanh quanh khối. */
+  rim: MeshBasicMaterial;
   mesh: Mesh;
   un: Unravel;
 }
@@ -241,6 +262,9 @@ interface GateObj {
 interface TrailObj {
   group: Group;
   jelly: Mesh;
+  /** Viền hoạt hình quanh vệt (vỏ lộn ngược phình hơn thân một khoảng đều). */
+  rim: Mesh;
+  rimMat: MeshBasicMaterial;
   mat: MeshPhysicalMaterial;
   /** Lõi sáng bên trong (chỉ có khi vệt còn mới, mờ đi khi chảy xẹp). */
   core: Mesh;
@@ -251,6 +275,13 @@ interface TrailObj {
   /** Bốn giọt thạch chảy ra ở góc chân vệt khi sắp hết hạn. */
   drips: Mesh[];
   dripMat: MeshPhysicalMaterial;
+  /** Pha phập phồng của vệt sắp hết hạn (cộng dồn, nhịp nhanh dần). */
+  phase: number;
+  /** Giọt thạch nhỏ xuống từ mép và gợn nước loang trên sàn khi chạm (vệt sắp hết hạn). */
+  drops: Mesh[];
+  dropMat: MeshPhysicalMaterial;
+  ripples: Mesh[];
+  rippleMat: MeshBasicMaterial;
   /** Bọt khí bên trong thạch còn mới. */
   bubbles: Mesh[];
   bubbleMat: MeshBasicMaterial;
@@ -269,9 +300,83 @@ function disposeTree(o: Object3D): void {
 }
 
 
-const GATE_LONG = 0.96; // bề rộng khối cửa dọc theo cạnh: đúng một ô
+const GATE_LONG = 1.0; // bề rộng gốc của khối cửa dọc theo cạnh: đúng một ô
+const GATE_EXT_SIDE = 0.08; // cửa dài thêm chừng này về mỗi bên nếu bên đó còn chỗ (không phải góc bàn, không sát cửa khác)
 
 type LoopItem = { x: number; y: number; id?: number; end?: 0 | 1 };
+
+/**
+ * Dò đường biên của một mặt nạ lưới (các điểm ảnh bật): trả về các vòng đa giác trực giao, đỉnh ở góc điểm ảnh (i, j), đã gộp các đỉnh thẳng hàng.
+ * Vùng bật luôn nằm cùng một phía của mọi cạnh nên vòng ngoài và vòng lỗ ngược chiều nhau.
+ */
+function traceMaskLoops(mask: Uint8Array, GW: number, GH: number): { i: number; j: number }[][] {
+  const on = (x: number, y: number): boolean => x >= 0 && y >= 0 && x < GW && y < GH && mask[y * GW + x] === 1;
+  type E = { a: number; b: number; used: boolean };
+  const key = (i: number, j: number): number => j * (GW + 1) + i;
+  const out = new Map<number, E[]>();
+  const add = (i0: number, j0: number, i1: number, j1: number): void => {
+    const list = out.get(key(i0, j0)) ?? [];
+    list.push({ a: key(i0, j0), b: key(i1, j1), used: false });
+    out.set(key(i0, j0), list);
+  };
+  for (let y = 0; y < GH; y++) {
+    for (let x = 0; x < GW; x++) {
+      if (!on(x, y)) continue;
+      if (!on(x, y - 1)) add(x, y, x + 1, y);
+      if (!on(x + 1, y)) add(x + 1, y, x + 1, y + 1);
+      if (!on(x, y + 1)) add(x + 1, y + 1, x, y + 1);
+      if (!on(x - 1, y)) add(x, y + 1, x, y);
+    }
+  }
+  const loops: { i: number; j: number }[][] = [];
+  const W1 = GW + 1;
+  for (const list of out.values()) {
+    for (const e0 of list) {
+      if (e0.used) continue;
+      const pts: { i: number; j: number }[] = [];
+      let e: E | undefined = e0;
+      while (e && !e.used) {
+        e.used = true;
+        pts.push({ i: e.a % W1, j: Math.floor(e.a / W1) });
+        e = out.get(e.b)?.find((q) => !q.used);
+      }
+      // gộp đỉnh thẳng hàng
+      const n = pts.length;
+      const merged = pts.filter((p, idx) => {
+        const a = pts[(idx + n - 1) % n];
+        const b = pts[(idx + 1) % n];
+        return (p.i - a.i) * (b.j - p.j) - (p.j - a.j) * (b.i - p.i) !== 0;
+      });
+      if (merged.length >= 3) loops.push(merged);
+    }
+  }
+  return loops;
+}
+
+/** Bo tròn các góc của một vòng đa giác (toạ độ thực): mỗi góc thay bằng cung bậc hai, bán kính `radiusAt(i)` bị chặn bởi nửa độ dài hai cạnh kề. */
+function fletPolygon(pts: { x: number; y: number }[], radiusAt: (idx: number) => number): { start: Vector2; steps: ({ type: 'l'; to: Vector2 } | { type: 'q'; c: Vector2; to: Vector2 })[] } {
+  const n = pts.length;
+  const corner = pts.map((p, idx) => {
+    const a = pts[(idx + n - 1) % n];
+    const b = pts[(idx + 1) % n];
+    const la = Math.hypot(a.x - p.x, a.y - p.y);
+    const lb = Math.hypot(b.x - p.x, b.y - p.y);
+    const r = Math.min(radiusAt(idx), la / 2, lb / 2);
+    return {
+      p,
+      entry: new Vector2(p.x + ((a.x - p.x) / la) * r, p.y + ((a.y - p.y) / la) * r),
+      exit: new Vector2(p.x + ((b.x - p.x) / lb) * r, p.y + ((b.y - p.y) / lb) * r),
+    };
+  });
+  const steps: ({ type: 'l'; to: Vector2 } | { type: 'q'; c: Vector2; to: Vector2 })[] = [];
+  steps.push({ type: 'q', c: new Vector2(corner[0].p.x, corner[0].p.y), to: corner[0].exit });
+  for (let idx = 1; idx <= n; idx++) {
+    const c = corner[idx % n];
+    steps.push({ type: 'l', to: c.entry });
+    steps.push({ type: 'q', c: new Vector2(c.p.x, c.p.y), to: c.exit });
+  }
+  return { start: corner[0].entry, steps };
+}
 
 /**
  * Các đa giác của viền khung (vòng ngoài w x h bo góc r, vòng trong wi x hi bo góc ri) sau khi cắt hở tại các khe cửa.
@@ -285,15 +390,15 @@ function frameLoopPieces(
   wi: number,
   hi: number,
   ri: number,
-  slots: { side: Dir; c: number }[],
-  hw: number,
+  slots: { side: Dir; c: number; hw: number }[],
+  _hw: number,
 ): { x: number; y: number }[][] {
-  type Notch = { side: Dir; c: number; id: number };
+  type Notch = { side: Dir; c: number; id: number; hw: number };
   const order: Dir[] = ['down', 'right', 'up', 'left']; // thứ tự đi ngược chiều kim đồng hồ
   const notches: Notch[] = [];
   for (const side of order) {
     const list = slots.filter((q) => q.side === side).sort((a, b) => (side === 'down' || side === 'right' ? a.c - b.c : b.c - a.c));
-    for (const q of list) notches.push({ side, c: q.c, id: notches.length });
+    for (const q of list) notches.push({ side, c: q.c, id: notches.length, hw: q.hw });
   }
   if (!notches.length) return [];
   const loop = (W: number, H: number, R: number): LoopItem[] => {
@@ -301,8 +406,8 @@ function frameLoopPieces(
     const mark = (side: Dir): void => {
       for (const n of notches.filter((q) => q.side === side)) {
         const dirSign = side === 'down' || side === 'right' ? 1 : -1; // chiều đi dọc cạnh
-        const a = n.c - dirSign * hw;
-        const b = n.c + dirSign * hw;
+        const a = n.c - dirSign * n.hw;
+        const b = n.c + dirSign * n.hw;
         const at = (t: number): { x: number; y: number } =>
           side === 'down' ? { x: t, y: -H / 2 } : side === 'up' ? { x: t, y: H / 2 } : side === 'right' ? { x: W / 2, y: t } : { x: -W / 2, y: t };
         out.push({ ...at(a), id: n.id, end: 0 }, { ...at(b), id: n.id, end: 1 });
@@ -401,6 +506,12 @@ export class BoardScene {
   private impacts: { x: number; z: number; key: string; t0: number; ring: Mesh; mat: MeshBasicMaterial }[] = [];
   private impactBusy = false;
   private markPool: Mesh[] = [];
+  private shadowSig = '';
+  private shadowTick = 0;
+  private shadowDirty = 4; // vài khung đầu sau khi dựng bàn luôn vẽ bóng
+  private undoPool: { mesh: Mesh; halo: Mesh; x: number; y: number; color: string; amt: number; hot: number }[] = [];
+  private undoTex: CanvasTexture | null = null;
+  private undoBusy = false;
   private bombFx: {
     group: Group;
     body: Group;
@@ -490,7 +601,7 @@ export class BoardScene {
   private faceBusy = false;
   private dots: Mesh[] = [];
   private ghost: { group: Group; mat: MeshStandardMaterial } | null = null;
-  private key = new DirectionalLight(0xfff0dc, 2.7);
+  private key = new DirectionalLight(0xfff0dc, 2.1);
   /** Đèn và cường độ gốc: lượt vẽ nền ở chế độ tập trung giảm cường độ để bàn tối dịu đi. */
   private lights: { l: Light; base: number }[] = [];
   private tileMeshes = new Map<string, Mesh>();
@@ -498,9 +609,9 @@ export class BoardScene {
   private dimScene = new Scene();
   private dimCam = new OrthographicCamera(-1, 1, 1, -1, 0, 1);
   private dimMat = new MeshBasicMaterial({ color: '#02061a', transparent: true, opacity: 0, depthTest: false, depthWrite: false });
-  private ballGeo = new RoundedBoxGeometry(BALL.w, BALL.h, BALL.w, 6, 0.27);
+  private ballGeo = new RoundedBoxGeometry(BALL.w, BALL.h, BALL.w, 4, 0.27);
   private fillGeo = new RoundedBoxGeometry(1, 1, 1, 2, 0.06);
-  private trailGeo = new RoundedBoxGeometry(0.98, 1, 0.98, 5, 0.22);
+  private trailGeo = new RoundedBoxGeometry(0.98, 1, 0.98, 3, 0.22);
   private dripGeo = new SphereGeometry(0.1, 12, 9);
   private puddleTex: Texture | null = null;
   /** Vũng thạch: vòng tròn mờ dần từ tâm ra mép (gradient), không có mép cứng. */
@@ -520,21 +631,27 @@ export class BoardScene {
     return this.puddleTex;
   } // lõi mờ của vệt, cao 1 đơn vị, co giãn theo chiều cao
   private dotGeo = new SphereGeometry(0.055, 10, 8);
+  private fiberGeo2 = new SphereGeometry(1, 10, 8);
+  private rippleGeo = new RingGeometry(0.72, 1, 24);
+  private trailT = 0;
 
   constructor(canvas: HTMLCanvasElement) {
-    this.renderer = new WebGLRenderer({ canvas, antialias: true, alpha: true });
+    this.renderer = new WebGLRenderer({ canvas, antialias: (window.devicePixelRatio || 1) < 2, alpha: true, powerPreference: 'high-performance' }); // màn mật độ cao đã mịn sẵn, bỏ MSAA cho nhẹ
     this.renderer.setClearColor(0x000000, 0);
     this.renderer.shadowMap.enabled = true;
+    this.renderer.shadowMap.autoUpdate = false; // bóng chỉ vẽ lại khi có gì thật sự di chuyển (xem shadowDue)
     this.renderer.shadowMap.type = PCFSoftShadowMap;
     this.ballGeo.userData.shared = true;
     this.fillGeo.userData.shared = true;
     this.dotGeo.userData.shared = true;
+    this.fiberGeo2.userData.shared = true;
+    this.rippleGeo.userData.shared = true;
 
-    const hemi = new HemisphereLight(0xeef4ff, 0xa28fc0, 1.55);
+    const hemi = new HemisphereLight(0xeef4ff, 0xa28fc0, 1.0);
     this.scene.add(hemi);
     this.key.position.set(0, 11, -4.3); // đèn gần đỉnh đầu, lệch về phía trên (x = 0): bóng đổ thẳng xuống dưới, không lệch trái/phải
     this.key.castShadow = true;
-    this.key.shadow.mapSize.set(2048, 2048);
+    this.key.shadow.mapSize.set(1024, 1024);
     this.key.shadow.bias = -0.0004;
     this.key.shadow.normalBias = 0.02;
     this.key.shadow.radius = 3;
@@ -553,14 +670,22 @@ export class BoardScene {
     this.dimScene.add(quad);
   }
 
+  /** Số liệu vẽ của khung hình gần nhất (để đo hiệu năng khi dev). */
+  stats(): { calls: number; triangles: number; geometries: number; textures: number } {
+    const i = this.renderer.info;
+    return { calls: i.render.calls, triangles: i.render.triangles, geometries: i.memory.geometries, textures: i.memory.textures };
+  }
+
   setSize(w: number, h: number, dpr: number): void {
-    this.renderer.setPixelRatio(Math.min(dpr, 2)); // tối đa 2x: màn 3x trên điện thoại sẽ quá nặng cho một cảnh toàn màn hình
+    this.renderer.setPixelRatio(Math.min(dpr, 1.75)); // trần 1.75x: màn 3x trên điện thoại sẽ quá nặng cho một cảnh toàn màn hình
     this.renderer.setSize(w, h, false);
+    this.shadowDirty = 4;
   }
 
   /** Dựng phần tĩnh của level: khung vàng, ô nền, cúc áo, giỏ; và các khối len (ẩn cho tới khi được mô tả). */
   setLevel(level: Level): void {
     this.level = level;
+    this.shadowDirty = 4;
     this.tileMeshes.clear();
     this.litObjs = [];
     disposeTree(this.staticGroup);
@@ -647,7 +772,7 @@ export class BoardScene {
 
   /** Còn hiệu ứng tự chạy theo thời gian (đầu chỉ đang mọc): game cần vẽ tiếp khung sau. */
   animating(): boolean {
-    return this.tipBusy || this.faceBusy || this.fadeBusy || this.fxBusy || this.shardBusy || this.impactBusy;
+    return this.tipBusy || this.faceBusy || this.fadeBusy || this.fxBusy || this.shardBusy || this.impactBusy || this.undoBusy;
   }
 
   render(desc: SceneDesc): void {
@@ -680,13 +805,14 @@ export class BoardScene {
         b.body.color.copy(mix);
         b.core.color.copy(mix).lerp(WHITE, 0.25);
         b.core.emissive.copy(mix);
+        b.rim.color.set('#100e2c').lerp(TMP_HEX.set(b.hex), 0.1 * (1 - hide)).lerp(BLACK, hide); // thạch ẩn: viền đen, không để lộ màu thật; lộ màu thì viền chuyển dần về màu thường
         if (b.q) {
           b.q.visible = hide > 0.03;
           (b.q.material as MeshBasicMaterial).opacity = hide;
         }
       }
       const fade = d.alpha < 0.999;
-      b.body.opacity = 0.8 * d.alpha; // thạch luôn bán trong suốt
+      b.body.opacity = 0.88 * d.alpha; // thạch luôn bán trong suốt
       b.core.transparent = fade;
       b.core.opacity = d.alpha;
       // khối tan: thu nhỏ dần về phía cửa trong lúc các sợi len bay ra (xem updateSuck); không còn xé hình khối bằng shader
@@ -701,6 +827,7 @@ export class BoardScene {
       b.group.position.x += d.pull.x * 0.18 * eat; // chỉ chui sâu vào thân cửa, không ló ra phía sau
       b.group.position.z += d.pull.y * 0.18 * eat;
       b.body.opacity *= 1 - eat * eat;
+      b.rim.opacity = d.alpha * (1 - eat * eat);
       b.un.uT.value = 0;
       b.mesh.castShadow = d.unravel < 0.02;
     }
@@ -714,6 +841,9 @@ export class BoardScene {
     let faceBusy = false;
     const nowShard = performance.now();
     const aliveBurst = new Set<string>();
+    const tNow = performance.now() / 1000;
+    const dtT = this.trailT ? Math.min(0.05, tNow - this.trailT) : 0;
+    this.trailT = tNow;
     this.trailPool.forEach((t, i) => {
       const d = desc.trails[i];
       if (!d) {
@@ -742,10 +872,19 @@ export class BoardScene {
       t.mat.opacity = (0.62 - 0.26 * l) * fade * bodyFade;
       const tall = 0.5 + (0.2 - 0.5) * l;
       const hh = Math.max(0.015, tall * (0.1 + 0.9 * d.grow) * (1 + 0.12 * pop));
-      const wob = 1 + 0.1 * Math.sin(d.grow * Math.PI) * (1 - ds) + 0.08 * l + 0.14 * pop; // phình lúc mọc, loang khi chảy, căng ra trước khi vỡ
+      const wob = 1 + 0.1 * Math.sin(d.grow * Math.PI) * (1 - ds) + 0.03 * l + 0.14 * pop; // phình lúc mọc, loang khi chảy, căng ra trước khi vỡ
       const sq = 1;
-      t.jelly.scale.set(wob * sq, hh, wob * sq);
-      t.jelly.position.y = hh / 2;
+      // phập phồng: vệt sắp hết hạn co giãn như đang thở, càng gần vỡ nhịp càng nhanh và biên độ càng lớn
+      t.phase += dtT * (3 + 4 * l);
+      const pul = l > 0.02 ? Math.sin(t.phase) * 0.012 * l : 0;
+      const hhp = hh * (1 - 1.4 * pul);
+      t.jelly.scale.set((wob * sq - 0.06) * (1 + pul), hhp, (wob * sq - 0.06) * (1 + pul)); // thân nhỏ hơn 0.06 để cả viền vừa khít một ô (không bè ra)
+      t.jelly.position.y = hhp / 2;
+      // viền: lớn hơn thân 0.05 mỗi phía (ngang) và 0.05 phía trên; nhạt dần khi vệt chảy xẹp hoặc vỡ
+      t.rim.scale.set((wob * sq + 0.022) * (1 + pul), hhp + 0.05, (wob * sq + 0.022) * (1 + pul));
+      t.rim.position.y = (hhp + 0.05) / 2 - 0.004;
+      t.rimMat.color.set('#1a1740').lerp(TMP_HEX.set(hex), 0.18);
+      t.rimMat.opacity = fade * bodyFade * (1 - 0.15 * l);
       // lõi sáng: nhỏ hơn thân, tắt dần khi chảy
       const coreOp = 0.55 * (1 - l) * d.grow * bodyFade * fade;
       t.coreMat.color.set(hex).lerp(WHITE, 0.3);
@@ -754,6 +893,38 @@ export class BoardScene {
       t.core.visible = coreOp > 0.01;
       t.core.scale.set(0.6, Math.max(0.01, hh * 0.72), 0.6);
       t.core.position.y = hh / 2;
+      // giọt nhỏ xuống từ cạnh bên rồi gợn trên sàn; càng gần vỡ càng nhiều và nhanh
+      const dropAmt = Math.max(0, Math.min(1, (l - 0.4) / 0.6)) * fade * bodyFade;
+      t.dropMat.color.set(hex).lerp(WHITE, 0.25);
+      t.dropMat.emissive.set(hex);
+      t.dropMat.opacity = 0.6 * dropAmt;
+      const cyc = 1.6 / (0.7 + 0.5 * l);
+      t.drops.forEach((dm, k) => {
+        const rp = t.ripples[k];
+        const u = (((tNow + (d.x * 0.37 + d.y * 0.53 + k * 0.5) * cyc) / cyc) % 1 + 1) % 1;
+        const px = k === 0 ? 0.5 : -0.5; // rơi ở hai cạnh bên (không bị khung bàn che)
+        const pz = k === 0 ? -0.15 : 0.2;
+        const on = dropAmt > 0.03;
+        if (u < 0.7) {
+          const f = u / 0.7;
+          const y0 = Math.max(0.08, hhp * 0.8);
+          dm.visible = on;
+          dm.position.set(px, y0 + (0.03 - y0) * f * f, pz);
+          const st = 1 + 1.2 * f;
+          dm.scale.set(0.03 * dropAmt, 0.03 * st * dropAmt, 0.03 * dropAmt);
+          rp.visible = false;
+        } else {
+          const g = (u - 0.7) / 0.3;
+          dm.visible = false;
+          rp.visible = on;
+          rp.position.set(px, 0.012, pz);
+          const rr = 0.04 + 0.2 * g;
+          rp.scale.set(rr, rr, rr);
+          const rm = rp.material as MeshBasicMaterial;
+          rm.color.set(hex).lerp(WHITE, 0.3);
+          rm.opacity = 0.3 * (1 - g) * dropAmt;
+        }
+      });
       // bọt khí bay lên chậm trong thân thạch mới
       t.bubbleMat.opacity = 0.42 * (1 - l) * d.grow * bodyFade * fade;
       t.bubbles.forEach((bm, k) => {
@@ -782,8 +953,9 @@ export class BoardScene {
         dm.position.y = 0.02 + 0.03 * dr;
       });
       t.group.visible = fade > 0.02 && d.scale > 0.02;
-      t.group.scale.setScalar(d.scale);
-      t.group.position.set(p.x, TILE_TOP, p.z);
+      const tp = d.pose;
+      t.group.scale.set(d.scale * (tp?.sx ?? 1), d.scale * (tp?.sy ?? 1), d.scale * (tp?.sz ?? 1));
+      t.group.position.set(p.x + (tp?.ox ?? 0), TILE_TOP, p.z + (tp?.oy ?? 0));
     });
 
     this.faceBusy = faceBusy;
@@ -825,7 +997,7 @@ export class BoardScene {
       o.mat.opacity = 1 - 0.58 * o.doneAmt;
       // Cửa đang nuốt: sáng và phình lên MỘT mức mượt theo g.suck (không nhịp nhanh), tránh nhấp nháy
       const pulse = 0.5;
-      const baseI = Math.max(o.glowAmt * 0.65, g.suck * 0.6);
+      const baseI = Math.max(0.2, o.glowAmt * 0.65, g.suck * 0.6); // nền phát sáng nhẹ để màu cửa đúng màu thạch (không bị tối đi vì đổ bóng)
       const fl = g.flash ?? 0;
       o.mat.emissive.set(o.baseColor).lerp(WHITE, fl);
       o.mat.emissiveIntensity = Math.max(baseI, 1.5 * fl);
@@ -870,6 +1042,7 @@ export class BoardScene {
     this.updateImpacts(nowMs);
     this.focusAmount = desc.focus?.amount ?? 1;
     this.updateMarks(desc.marks, nowS);
+    this.updateUndoMarks(desc.undoMarks ?? [], nowS, dtS);
     this.updateBomb(desc.bomb);
 
     // khối mờ báo điểm dừng và đường chấm
@@ -896,12 +1069,21 @@ export class BoardScene {
     this.updateDots(desc.line ?? (this.lineAmt > 0.003 ? this.lastLine : null), this.lineAmt);
     this.fadeBusy = busy;
 
+    // Bản đồ bóng chỉ cập nhật khi cảnh thật sự đổi (khối/vệt di chuyển, hiệu ứng đang chạy), còn lúc đứng yên (chỉ có thạch rung nhẹ) thì giữ bóng cũ
+    const sig =
+      desc.balls.map((b) => `${b.id}${b.x.toFixed(2)},${b.y.toFixed(2)},${b.lift.toFixed(2)},${b.scale.toFixed(2)},${b.alpha.toFixed(2)},${b.ox.toFixed(2)},${b.oy.toFixed(2)},${b.sx.toFixed(1)},${b.sy.toFixed(1)},${b.sz.toFixed(1)},${b.unravel.toFixed(1)}`).join('|') +
+      '#' +
+      desc.trails.map((t) => `${t.x},${t.y},${t.grow.toFixed(1)},${t.dissolve.toFixed(1)},${t.loosen.toFixed(1)},${t.scale.toFixed(1)},${t.alpha.toFixed(1)}`).join('|') +
+      `#${desc.pins.length}`;
+    const shadowDue = sig !== this.shadowSig || this.animating() || this.shadowDirty > 0 || ++this.shadowTick % 8 === 0; // thêm nhịp 8 khung/lần để tự chữa nếu có thay đổi mà chữ ký không bắt được
+    this.shadowSig = sig;
+    if (this.shadowDirty > 0) this.shadowDirty--;
     const f = desc.focus;
     const cam = this.view.camera;
     const r = this.renderer;
+    r.shadowMap.needsUpdate = shadowDue;
     if (!f || f.amount < 0.002) {
       r.autoClear = true;
-      r.shadowMap.autoUpdate = true;
       r.render(this.scene, cam);
       return;
     }
@@ -913,14 +1095,11 @@ export class BoardScene {
     this.dimMat.opacity = 0.9 * f.amount;
     r.render(this.dimScene, this.dimCam);
     for (const q of this.lights) q.l.intensity = q.base * (1 - 0.5 * f.amount);
-    r.shadowMap.autoUpdate = true;
     r.render(this.scene, cam);
     for (const q of this.lights) q.l.intensity = q.base;
-    r.shadowMap.autoUpdate = false;
     cam.layers.set(1);
     r.render(this.scene, cam);
     cam.layers.set(0);
-    r.shadowMap.autoUpdate = true;
     r.autoClear = true;
   }
 
@@ -957,7 +1136,7 @@ export class BoardScene {
    */
   private buildShapedBoard(W: number, H: number): void {
     const level = this.level!;
-    const gold = new MeshPhysicalMaterial({ color: '#f6b92f', roughness: 0.32, metalness: 0.12, clearcoat: 0.7, clearcoatRoughness: 0.25 });
+    const gold = new MeshPhysicalMaterial({ color: '#b58a52', roughness: 0.32, metalness: 0.12, clearcoat: 0.7, clearcoatRoughness: 0.25 });
     const brown = new MeshStandardMaterial({ color: '#6b3d0a', roughness: 0.6 });
     const F = 10; // số ô mịn trên một ô chơi
     const pad = 6;
@@ -975,93 +1154,116 @@ export class BoardScene {
     // toạ độ thế giới của ô mịn (i, j): tâm bàn ở gốc
     const wx = (i: number): number => (i - pad) / F - W / 2;
     const wz = (j: number): number => (j - pad) / F - H / 2;
-    const boxes = (mask: Uint8Array, mat: Material, y0: number, y1: number, shadow: boolean): void => {
-      const open = new Map<string, { i0: number; i1: number; j0: number; j1: number }>();
-      const rects: { i0: number; i1: number; j0: number; j1: number }[] = [];
-      for (let j = 0; j <= GH; j++) {
-        const runs: [number, number][] = [];
-        if (j < GH) {
-          let i = 0;
-          while (i < GW) {
-            if (mask[j * GW + i]) {
-              const st = i;
-              while (i < GW && mask[j * GW + i]) i++;
-              runs.push([st, i]);
-            } else i++;
-          }
-        }
-        const keys = new Set(runs.map(([a, b]) => `${a}-${b}`));
-        for (const [k, r] of [...open]) {
-          if (!keys.has(k)) {
-            rects.push(r);
-            open.delete(k);
-          }
-        }
-        for (const [a, b] of runs) {
-          const k = `${a}-${b}`;
-          const r = open.get(k);
-          if (r) r.j1 = j + 1;
-          else open.set(k, { i0: a, i1: b, j0: j, j1: j + 1 });
-        }
-      }
-      for (const r of rects) {
-        const m = new Mesh(new BoxGeometry((r.i1 - r.i0) / F, y1 - y0, (r.j1 - r.j0) / F), mat);
-        m.position.set(wx((r.i0 + r.i1) / 2), (y0 + y1) / 2, wz((r.j0 + r.j1) / 2));
-        m.castShadow = shadow;
-        m.receiveShadow = true;
-        this.staticGroup.add(m);
-      }
-    };
     const ringSteps = Math.round(RING * F);
     const outer = dilate(board, ringSteps);
-    // đế nâu: cùng hình với khung vàng (không nhô ngang ra ngoài tường), chỉ lộ thành nâu ở phía dưới
-    boxes(outer, brown, -0.16, -0.06, false);
-    // khung vàng = vùng giãn trừ các ô, trừ chỗ khoét cho cửa
+    // khung vàng = vùng giãn trừ các ô. Dò đường biên rồi bo tròn các góc (ngoài bo to, góc lõm bo vừa, góc trong lòng bàn bo nhẹ).
+    // Cửa là khối đặt đè lên đoạn khung nên không cần khoét khung.
     const frame = new Uint8Array(GW * GH);
     for (let n = 0; n < frame.length; n++) frame[n] = outer[n] && !board[n] ? 1 : 0;
-    for (const g of level.gates) {
-      const c = gateCell(level, g);
-      const cw = cellToWorld(W, H, c.x, c.y);
-      const horizontal = g.side === 'up' || g.side === 'down';
-      const sgn = g.side === 'up' || g.side === 'left' ? -1 : 1;
-      for (let j = 0; j < GH; j++) {
-        for (let i = 0; i < GW; i++) {
-          const x = wx(i + 0.5) - 0; // tâm ô mịn
-          const z = wz(j + 0.5);
-          const along = horizontal ? x - cw.x : z - cw.z;
-          const out = (horizontal ? z - cw.z : x - cw.x) * sgn - 0.5;
-          if (Math.abs(along) < GATE_LONG / 2 + 0.04 && out > -0.001 && out < RING + 0.04) frame[j * GW + i] = 0;
+    const loops = traceMaskLoops(frame, GW, GH);
+    const area = (l: { i: number; j: number }[]): number => l.reduce((a, p, idx) => {
+      const q = l[(idx + 1) % l.length];
+      return a + (p.i * q.j - q.i * p.j);
+    }, 0) / 2;
+    if (loops.length) {
+      const big = loops.reduce((a, l) => (Math.abs(area(l)) > Math.abs(area(a)) ? l : a));
+      const sOuter = Math.sign(area(big));
+      const toWorld = (l: { i: number; j: number }[]): { x: number; y: number }[] => l.map((p) => ({ x: wx(p.i), y: -wz(p.j) }));
+      const roundedPath = (l: { i: number; j: number }[], isOuter: boolean, target: Path): void => {
+        const pts = toWorld(l);
+        const n = l.length;
+        const f = fletPolygon(pts, (idx) => {
+          if (!isOuter) return 0.14;
+          const a = l[(idx + n - 1) % n];
+          const b = l[(idx + 1) % n];
+          const p = l[idx];
+          const cross = (p.i - a.i) * (b.j - p.j) - (p.j - a.j) * (b.i - p.i);
+          return cross * sOuter > 0 ? RING : 0.25; // góc lồi của khung bo cùng bề dày viền, góc lõm bo nhỏ hơn
+        });
+        target.moveTo(f.start.x, f.start.y);
+        for (const st of f.steps) {
+          if (st.type === 'l') target.lineTo(st.to.x, st.to.y);
+          else target.quadraticCurveTo(st.c.x, st.c.y, st.to.x, st.to.y);
         }
+      };
+      const inside = (pt: { x: number; y: number }, poly: { x: number; y: number }[]): boolean => {
+        let c = false;
+        for (let a = 0, b = poly.length - 1; a < poly.length; b = a++) {
+          if (poly[a].y > pt.y !== poly[b].y > pt.y && pt.x < ((poly[b].x - poly[a].x) * (pt.y - poly[a].y)) / (poly[b].y - poly[a].y) + poly[a].x) c = !c;
+        }
+        return c;
+      };
+      const outerLoops = loops.filter((l) => Math.sign(area(l)) === sOuter);
+      const holeLoops = loops.filter((l) => Math.sign(area(l)) !== sOuter);
+      const frameOpts = { depth: RING_TOP + 0.04, bevelEnabled: true, bevelSize: 0.04, bevelThickness: 0.04, bevelSegments: 3, curveSegments: 10 };
+      // mỗi lỗ thuộc về vòng ngoài nhỏ nhất bao quanh nó (bàn có đảo ở giữa có vòng ngoài lồng nhau)
+      const ownerOf = new Map<{ i: number; j: number }[], { i: number; j: number }[]>();
+      for (const hl of holeLoops) {
+        const pt = toWorld(hl)[0];
+        const cands = outerLoops.filter((ol) => inside(pt, toWorld(ol)));
+        if (cands.length) ownerOf.set(hl, cands.reduce((a, b) => (Math.abs(area(b)) < Math.abs(area(a)) ? b : a)));
+      }
+      for (const ol of outerLoops) {
+        const shape = new Shape();
+        roundedPath(ol, true, shape);
+        for (const hl of holeLoops) {
+          if (ownerOf.get(hl) !== ol) continue;
+          const hp = new Path();
+          roundedPath(hl, false, hp);
+          shape.holes.push(hp);
+        }
+        const piece = new Mesh(new ExtrudeGeometry(shape, frameOpts), gold);
+        piece.rotation.x = -Math.PI / 2;
+        piece.position.y = -0.08;
+        piece.castShadow = true;
+        piece.receiveShadow = true;
+        this.staticGroup.add(piece);
+        // đế nâu: cùng hình với khung (không có lỗ), chỉ lộ thành nâu ở phía dưới
+        const baseShape = new Shape();
+        roundedPath(ol, true, baseShape);
+        const base = new Mesh(new ExtrudeGeometry(baseShape, { depth: 0.1, bevelEnabled: false, curveSegments: 10 }), brown);
+        base.rotation.x = -Math.PI / 2;
+        base.position.y = -0.16;
+        base.receiveShadow = true;
+        this.staticGroup.add(base);
       }
     }
-    boxes(frame, gold, -0.08, RING_TOP + 0.0, true);
 
     // sàn dưới các ô và các ô sáng tối xen kẽ
-    const floorMat = new MeshStandardMaterial({ color: '#a9bff0', roughness: 0.8 });
-    const tileGeo = new RoundedBoxGeometry(0.985, 0.08, 0.985, 2, 0.04);
+    const floorMat = new MeshStandardMaterial({ color: '#8099dc', roughness: 0.8 });
+    const tileGeo = new RoundedBoxGeometry(1, 0.4, 1, 3, 0.1); // ô bo tròn, có khe hở lộ sàn tối bên dưới (đủ cao để bán kính bo không bị chặn bởi chiều cao; phần thấp chìm dưới sàn)
     const matA = new MeshStandardMaterial({ color: '#eef3ff', roughness: 0.55 });
     const matB = new MeshStandardMaterial({ color: '#dce7ff', roughness: 0.55 });
+    const floorParts: BufferGeometry[] = []; // mọi ô sàn gộp thành một lưới (một lượt vẽ thay vì mỗi ô một lượt)
     for (let y = 0; y < H; y++) {
       for (let x = 0; x < W; x++) {
         if (!inBoard(level, x, y)) continue;
         const p = cellToWorld(W, H, x, y);
-        const fl = new Mesh(new PlaneGeometry(1.02, 1.02), floorMat);
-        fl.rotation.x = -Math.PI / 2;
-        fl.position.set(p.x, -0.02, p.z);
-        fl.receiveShadow = true;
-        this.staticGroup.add(fl);
+        const fg = new PlaneGeometry(1.02, 1.02);
+        fg.rotateX(-Math.PI / 2);
+        fg.translate(p.x, -0.02, p.z);
+        floorParts.push(fg);
         const t = new Mesh(tileGeo, (x + y) % 2 ? matB : matA);
-        t.position.set(p.x, 0, p.z);
+        t.position.set(p.x, 0.04 - 0.2, p.z); // mặt trên vẫn ở TILE_TOP
         t.receiveShadow = true;
         this.staticGroup.add(t);
         this.tileMeshes.set(`${x},${y}`, t);
+      }
+    }
+    if (floorParts.length) {
+      const merged = mergeGeometries(floorParts);
+      for (const g of floorParts) g.dispose();
+      if (merged) {
+        const floor = new Mesh(merged, floorMat);
+        floor.receiveShadow = true;
+        this.staticGroup.add(floor);
       }
     }
   }
 
   private buildBoard(W: number, H: number): void {
     if (this.level?.mask) return this.buildShapedBoard(W, H);
-    const gold = new MeshPhysicalMaterial({ color: '#f6b92f', roughness: 0.32, metalness: 0.12, clearcoat: 0.7, clearcoatRoughness: 0.25 });
+    const gold = new MeshPhysicalMaterial({ color: '#b58a52', roughness: 0.32, metalness: 0.12, clearcoat: 0.7, clearcoatRoughness: 0.25 });
     const brown = new MeshStandardMaterial({ color: '#6b3d0a', roughness: 0.6 });
     const roundedRect = (shape: Shape | Path, w: number, h: number, r: number): void => {
       const x = -w / 2;
@@ -1091,10 +1293,13 @@ export class BoardScene {
       const horizontal = g.side === 'up' || g.side === 'down';
       const gcell = gateCell(this.level!, g);
       const along = cellToWorld(W, H, gcell.x, gcell.y);
-      return { side: g.side, c: horizontal ? along.x : -along.z }; // toạ độ dọc theo cạnh, trong hệ toạ độ hình (y hình = -z thế giới)
+      const ext = this.gateExt(g);
+      // khe khoét hẹp hơn cửa 0.07 mỗi bên (cửa đè lên khung, không hở ở đầu cửa bo tròn; cửa ở góc bàn ngắn hơn, lệch về phía còn chỗ): chỉ số tăng = +x (cạnh ngang) hoặc +z = -y hình (cạnh dọc)
+      const shift = (ext.hi - ext.lo) / 2;
+      return { side: g.side, c: (horizontal ? along.x : -along.z) + (horizontal ? shift : -shift), hw: (GATE_LONG + ext.lo + ext.hi) / 2 - 0.07 }; // toạ độ dọc theo cạnh, trong hệ toạ độ hình (y hình = -z thế giới)
     });
     const frameOpts = { depth: RING_TOP + 0.04, bevelEnabled: true, bevelSize: 0.04, bevelThickness: 0.04, bevelSegments: 3, curveSegments: 14 };
-    for (const poly of frameLoopPieces(W + 2 * RING, H + 2 * RING, 0.36, W + 0.06, H + 0.06, 0, slots, GATE_LONG / 2 + 0.04)) {
+    for (const poly of frameLoopPieces(W + 2 * RING, H + 2 * RING, 0.36, W + 0.06, H + 0.06, 0.16, slots, 0)) {
       const shape = new Shape(poly.map((q) => new Vector2(q.x, q.y)));
       const piece = new Mesh(new ExtrudeGeometry(shape, frameOpts), gold);
       piece.rotation.x = -Math.PI / 2;
@@ -1105,19 +1310,19 @@ export class BoardScene {
     }
 
     // lòng bàn và các ô sáng tối xen kẽ
-    const floor = new Mesh(new PlaneGeometry(W + 0.12, H + 0.12), new MeshStandardMaterial({ color: '#a9bff0', roughness: 0.8 }));
+    const floor = new Mesh(new PlaneGeometry(W + 0.12, H + 0.12), new MeshStandardMaterial({ color: '#8099dc', roughness: 0.8 }));
     floor.rotation.x = -Math.PI / 2;
     floor.position.y = -0.02;
     floor.receiveShadow = true;
     this.staticGroup.add(floor);
-    const tileGeo = new RoundedBoxGeometry(0.985, 0.08, 0.985, 2, 0.04);
+    const tileGeo = new RoundedBoxGeometry(1, 0.4, 1, 3, 0.1); // ô bo tròn, có khe hở lộ sàn tối bên dưới (đủ cao để bán kính bo không bị chặn bởi chiều cao; phần thấp chìm dưới sàn)
     const matA = new MeshStandardMaterial({ color: '#eef3ff', roughness: 0.55 });
     const matB = new MeshStandardMaterial({ color: '#dce7ff', roughness: 0.55 });
     for (let y = 0; y < H; y++) {
       for (let x = 0; x < W; x++) {
         const t = new Mesh(tileGeo, (x + y) % 2 ? matB : matA);
         const p = cellToWorld(W, H, x, y);
-        t.position.set(p.x, 0, p.z);
+        t.position.set(p.x, 0.04 - 0.2, p.z); // mặt trên vẫn ở TILE_TOP
         t.receiveShadow = true;
         this.staticGroup.add(t);
         this.tileMeshes.set(`${x},${y}`, t);
@@ -1174,6 +1379,24 @@ export class BoardScene {
     this.staticGroup.add(g);
   }
 
+  /**
+   * Độ dài thêm của cửa về hai phía dọc theo cạnh: `hi` về phía chỉ số ô tăng dần, `lo` về phía giảm dần. Phía nào là góc bàn (ô kề không thuộc bàn)
+   * hoặc có cửa khác ngay ô kề thì không dài thêm, để cửa không nhô ra góc khung và không đè lên cửa bên cạnh.
+   */
+  private gateExt(gate: { side: Dir; index: number; depth?: number }): { lo: number; hi: number } {
+    const level = this.level;
+    if (!level) return { lo: GATE_EXT_SIDE, hi: GATE_EXT_SIDE };
+    const gc = gateCell(level, gate);
+    const horizontal = gate.side === 'up' || gate.side === 'down';
+    const side = (sgn: number): number => {
+      const n = horizontal ? { x: gc.x + sgn, y: gc.y } : { x: gc.x, y: gc.y + sgn };
+      if (!inBoard(level, n.x, n.y)) return 0;
+      const other = level.gates.some((q) => q !== gate && q.side === gate.side && (() => { const c = gateCell(level, q); return c.x === n.x && c.y === n.y; })());
+      return other ? 0 : GATE_EXT_SIDE;
+    };
+    return { lo: side(-1), hi: side(1) };
+  }
+
   /** Cửa len: một đoạn tường sơn màu, có khung và panel nổi, tam giác trắng trên mặt chỉ hướng thoát. */
   private buildGate(gate: { side: Dir; index: number; depth?: number }, color: string, W: number, H: number): void {
     const { side } = gate;
@@ -1189,15 +1412,22 @@ export class BoardScene {
     g.rotation.y = horizontal ? 0 : Math.PI / 2; // trục dài của cửa chạy dọc theo mép bàn
     // Cửa là một đoạn của chính bức tường: cùng độ cao, cùng bề dày, lấp kín chỗ viền vàng, chỉ khác ở màu và lớp sơn.
     // Viền khung bị cắt hở đúng chỗ này; cửa là khối hộp chữ nhật lấp kín khe: cùng độ dày, cùng độ cao với viền.
-    const LONG = GATE_LONG;
+    const ext = this.gateExt(gate);
+    const LONG = GATE_LONG + ext.lo + ext.hi;
+    // trục dọc cạnh của cửa: cạnh ngang +x = chỉ số tăng; cạnh dọc (xoay 90°) +x = chỉ số giảm
+    const alongShift = ((horizontal ? ext.hi - ext.lo : ext.lo - ext.hi)) / 2;
     const OUT = 0.02;
-    const THICK = RING + 2 * OUT;
+    const EXT_OUT = 0.05; // cửa nhô thêm ra phía ngoài khung
+    const EXT_IN = 0.08; // và lấn thêm vào phía trong bàn
+    const SHIFT = (EXT_OUT - EXT_IN) / 2; // tâm cửa dịch ra ngoài chừng này
+    const THICK = RING + 2 * OUT + EXT_OUT + EXT_IN;
     const BOTTOM = -0.14;
-    const TOP = RING_TOP + 0.006;
+    const TOP = RING_TOP + 0.12; // cửa cao hơn khung một chút
     const outSign = side === 'up' || side === 'left' ? -1 : 1;
     const mat = doorMaterial(hex);
-    const door = new Mesh(new RoundedBoxGeometry(LONG, TOP - BOTTOM, THICK, 4, 0.06), mat);
-    door.position.set(0, (TOP + BOTTOM) / 2 - g.position.y, outSign * OUT);
+    mat.color.offsetHSL(0, 0.25, 0.03); // sơn đậm và rực hơn một chút cho đồng bộ với thạch
+    const door = new Mesh(new RoundedBoxGeometry(LONG, TOP - BOTTOM, THICK, 4, 0.13), mat);
+    door.position.set(alongShift, (TOP + BOTTOM) / 2 - g.position.y, outSign * (OUT + SHIFT));
     door.castShadow = true;
     door.receiveShadow = true;
     g.add(door);
@@ -1216,17 +1446,18 @@ export class BoardScene {
       new MeshBasicMaterial({ map: symbolTexture(kind), transparent: true, depthWrite: false });
     const place = (m: Mesh, offset: number): void => {
       m.rotation.x = -Math.PI / 2;
-      m.position.set(pos.x + dir.x * offset + (horizontal ? 0 : outSign * OUT), top, pos.z + dir.z * offset + (horizontal ? outSign * OUT : 0));
+      m.position.set(pos.x + dir.x * offset + (horizontal ? 0 : outSign * (OUT + SHIFT)), top, pos.z + dir.z * offset + (horizontal ? outSign * (OUT + SHIFT) : 0));
       m.renderOrder = 5;
       this.staticGroup.add(m);
     };
     const mark = new Mesh(new PlaneGeometry(0.3, 0.3), decalMat('triangle'));
     // tam giác mặc định chỉ về phía -z; xoay quanh trục đứng để chỉ ra ngoài theo từng cạnh
     mark.rotation.order = 'YXZ';
-    place(mark, 0);
+    const decalOff = horizontal ? alongShift : -alongShift; // mũi tên / dấu ✓ nằm giữa mặt cửa (cửa có thể lệch tâm ô)
+    place(mark, decalOff);
     mark.rotation.y = side === 'up' ? 0 : side === 'down' ? Math.PI : side === 'left' ? Math.PI / 2 : -Math.PI / 2;
     const check = new Mesh(new PlaneGeometry(0.3, 0.3), decalMat('check'));
-    place(check, 0);
+    place(check, decalOff);
     check.visible = false;
     const inward = side === 'up' ? new Vector3(0, 0, 1) : side === 'down' ? new Vector3(0, 0, -1) : side === 'left' ? new Vector3(1, 0, 0) : new Vector3(-1, 0, 0);
     this.gates.set(gateKey(gate), { group: g, mat, mark, check, baseColor: hex, pos: new Vector3(pos.x, 0, pos.z), inward, doneAmt: 0, glowAmt: 0, wildAmt: 0, inited: false, rainbow });
@@ -1289,16 +1520,37 @@ export class BoardScene {
         bubbles.push(bm);
         group.add(bm);
       }
+      // giọt nhỏ xuống từ mép + gợn trên sàn
+      const dropMat = jellyMaterial('#ffffff', 0.9);
+      dropMat.depthWrite = false;
+      const rippleMat = new MeshBasicMaterial({ color: '#ffffff', transparent: true, opacity: 0, depthWrite: false, side: DoubleSide });
+      const drops: Mesh[] = [];
+      const ripples: Mesh[] = [];
+      for (let k = 0; k < 2; k++) {
+        const dm = new Mesh(this.fiberGeo2, dropMat);
+        dm.renderOrder = 4;
+        dm.visible = false;
+        const rp = new Mesh(this.rippleGeo, rippleMat.clone()); // mỗi gợn một vật liệu để mờ riêng
+        rp.rotation.x = -Math.PI / 2;
+        rp.renderOrder = 0;
+        rp.visible = false;
+        drops.push(dm);
+        ripples.push(rp);
+        group.add(dm, rp);
+      }
       // vệt sáng
       const shineMat = new MeshBasicMaterial({ color: '#ffffff', transparent: true, opacity: 0.5, depthWrite: false });
       const shine = new Mesh(new SphereGeometry(1, 14, 8), shineMat);
       shine.scale.set(0.2, 0.012, 0.09);
       shine.rotation.y = 0.5;
       shine.renderOrder = 4;
-      group.add(puddle, core, jelly, shine);
+      const rimMat = new MeshBasicMaterial({ color: '#1a1740', side: BackSide, transparent: true, opacity: 0, depthWrite: false });
+      const rim = new Mesh(this.trailGeo, rimMat);
+      rim.renderOrder = 1;
+      group.add(puddle, rim, core, jelly, shine);
       group.visible = false;
       this.dynamicGroup.add(group);
-      this.trailPool.push({ group, jelly, mat, core, coreMat, puddle, puddleMat, drips, dripMat, bubbles, bubbleMat, shine, shineMat });
+      this.trailPool.push({ group, jelly, rim, rimMat, phase: Math.random() * 6.28, drops, dropMat, ripples, rippleMat, mat, core, coreMat, puddle, puddleMat, drips, dripMat, bubbles, bubbleMat, shine, shineMat });
     }
   }
 
@@ -1662,6 +1914,103 @@ export class BoardScene {
     this.impactBusy = busy;
   }
 
+  private undoTexture(): CanvasTexture {
+    if (this.undoTex) return this.undoTex;
+    const cv = document.createElement('canvas');
+    cv.width = cv.height = 128;
+    const c = cv.getContext('2d')!;
+    c.lineCap = 'round';
+    c.lineJoin = 'round';
+    // vòng đứt nét + mũi tên cong quay lại (↶), có viền tối để nổi trên sàn sáng
+    const draw = (lw: number, style: string): void => {
+      c.strokeStyle = style;
+      c.fillStyle = style;
+      c.lineWidth = lw;
+      c.setLineDash([14, 10]);
+      c.beginPath();
+      c.arc(64, 64, 52, 0, Math.PI * 2);
+      c.stroke();
+      c.setLineDash([]);
+      c.beginPath();
+      c.arc(64, 68, 24, Math.PI * 1.15, Math.PI * 2.15);
+      c.stroke();
+      c.beginPath();
+      c.moveTo(34, 52);
+      c.lineTo(36, 74);
+      c.lineTo(56, 66);
+      c.closePath();
+      c.fill();
+      c.stroke();
+    };
+    draw(13, 'rgba(0,0,0,0.5)');
+    draw(7, '#ffffff');
+    this.undoTex = new CanvasTexture(cv);
+    this.undoTex.colorSpace = SRGBColorSpace;
+    return this.undoTex;
+  }
+
+  /** Điểm hoàn tác: vòng đứt nét có mũi tên quay lại, màu của khối, tại ô khối sẽ về khi kéo ngược theo vệt. Mờ vào/ra theo từng khối. */
+  private updateUndoMarks(marks: NonNullable<SceneDesc['undoMarks']>, nowS: number, dtS: number): void {
+    if (!this.level) return;
+    const W = this.level.width;
+    const H = this.level.height;
+    while (this.undoPool.length < Math.max(marks.length, 1)) {
+      const mesh = new Mesh(new PlaneGeometry(0.84, 0.84), new MeshBasicMaterial({ map: this.undoTexture(), transparent: true, opacity: 0, depthWrite: false, depthTest: false }));
+      mesh.rotation.x = -Math.PI / 2;
+      mesh.renderOrder = 7;
+      mesh.visible = false;
+      mesh.layers.enable(1);
+      this.dynamicGroup.add(mesh);
+      // vầng vàng nhấp nháy quanh điểm gốc khi đang hướng dẫn
+      const halo = new Mesh(new RingGeometry(0.4, 0.5, 40), new MeshBasicMaterial({ color: '#ffe45a', transparent: true, opacity: 0, depthWrite: false, depthTest: false, side: DoubleSide }));
+      halo.rotation.x = -Math.PI / 2;
+      halo.renderOrder = 7;
+      halo.visible = false;
+      halo.layers.enable(1);
+      this.dynamicGroup.add(halo);
+      this.undoPool.push({ mesh, halo, x: 0, y: 0, color: 'pink', amt: 0, hot: 0 });
+    }
+    const k = 1 - Math.exp(-dtS / 0.07);
+    this.undoBusy = false;
+    this.undoPool.forEach((u, i) => {
+      const d = marks[i];
+      if (d) {
+        // đổi sang ô khác khi đang mờ ra: nhảy ngay, chỉ mờ vào lại
+        if (u.amt < 0.02 || d.x !== u.x || d.y !== u.y) {
+          if (d.x !== u.x || d.y !== u.y) u.amt = Math.min(u.amt, 0.02);
+          u.x = d.x;
+          u.y = d.y;
+        }
+        u.color = d.color;
+      }
+      u.amt += ((d ? 1 : 0) - u.amt) * k;
+      u.hot += ((d?.hot ? 1 : 0) - u.hot) * k;
+      if (u.hot > 0.01) this.undoBusy = true;
+      if (!d && u.amt < 0.01) u.amt = 0;
+      if (Math.abs((d ? 1 : 0) - u.amt) > 0.01) this.undoBusy = true;
+      const m = u.mesh;
+      m.visible = u.amt > 0.003;
+      if (!m.visible) {
+        u.halo.visible = false;
+        return;
+      }
+      const p = cellToWorld(W, H, u.x, u.y);
+      m.position.set(p.x, TILE_TOP + 0.5, p.z); // trên đỉnh vệt thạch (vệt phủ đúng ô này) để luôn nhìn thấy
+      m.scale.setScalar(0.9 + 0.1 * u.amt);
+      const mat = m.material as MeshBasicMaterial;
+      mat.opacity = 0.95 * u.amt; // biểu tượng trắng viền tối: nổi trên cả vệt cùng màu
+      const ph = 0.5 + 0.5 * Math.sin(nowS * 5);
+      m.scale.setScalar((0.9 + 0.1 * u.amt) * (1 + 0.22 * u.hot * ph));
+      const hz = u.halo;
+      hz.visible = u.hot > 0.01;
+      if (hz.visible) {
+        hz.position.set(p.x, TILE_TOP + 0.5, p.z);
+        hz.scale.setScalar(1.05 + 0.3 * ph);
+        (hz.material as MeshBasicMaterial).opacity = u.hot * (0.55 + 0.4 * ph);
+      }
+    });
+  }
+
   /** Vòng sáng nhấp nháy đánh dấu mục tiêu của booster đang chờ chọn. */
   private updateMarks(marks: MarkDesc[], nowS: number): void {
     if (!this.level) return;
@@ -1852,6 +2201,8 @@ export class BoardScene {
   }
 
   private portalAnim: { disc: Mesh; ring: Mesh; speed: number; phase: number }[] = [];
+  /** Ba chevron của mỗi ô mũi tên: sáng lần lượt từ sau ra trước như đang chạy theo hướng ô. */
+  private arrowAnim: MeshBasicMaterial[][] = [];
   private arrowTex: CanvasTexture | null = null;
   private swirlTex: CanvasTexture | null = null;
 
@@ -1860,36 +2211,65 @@ export class BoardScene {
     const cv = document.createElement('canvas');
     cv.width = cv.height = 256;
     const c = cv.getContext('2d')!;
-    // nền băng chuyền xanh dương bo góc
+    // ô băng chuyền: phủ trọn ô, bo góc như các ô sàn, xanh dương bóng kiểu thạch (các chevron chạy là lớp riêng, xem chevTexture)
     c.beginPath();
-    c.roundRect(14, 14, 228, 228, 44);
-    const g = c.createLinearGradient(0, 14, 0, 242);
-    g.addColorStop(0, '#5fa8ff');
-    g.addColorStop(1, '#2f6fd6');
+    c.roundRect(3, 3, 250, 250, 34);
+    const g = c.createLinearGradient(0, 3, 0, 253);
+    g.addColorStop(0, '#59c2ff');
+    g.addColorStop(1, '#1f78e6');
     c.fillStyle = g;
     c.fill();
-    c.lineWidth = 10;
-    c.strokeStyle = '#1b4aa0';
+    c.lineWidth = 6;
+    c.strokeStyle = '#1558b5';
     c.stroke();
-    // ba chevron trắng chỉ lên
-    c.lineJoin = 'round';
-    c.lineCap = 'round';
-    for (const [dy, a] of [[62, 0.5], [18, 0.75], [-26, 1]] as const) {
-      c.beginPath();
-      c.moveTo(70, 168 + dy);
-      c.lineTo(128, 112 + dy);
-      c.lineTo(186, 168 + dy);
-      c.lineWidth = 30;
-      c.strokeStyle = `rgba(27,74,160,${a})`;
-      c.stroke();
-      c.lineWidth = 18;
-      c.strokeStyle = `rgba(255,255,255,${a})`;
-      c.stroke();
-    }
+    // vệt sáng bóng ở nửa trên
+    c.save();
+    c.beginPath();
+    c.roundRect(3, 3, 250, 250, 34);
+    c.clip();
+    const gl = c.createLinearGradient(0, 3, 0, 128);
+    gl.addColorStop(0, 'rgba(255,255,255,0.38)');
+    gl.addColorStop(1, 'rgba(255,255,255,0)');
+    c.fillStyle = gl;
+    c.fillRect(0, 0, 256, 128);
+    c.restore();
     this.arrowTex = new CanvasTexture(c.canvas);
     this.arrowTex.colorSpace = SRGBColorSpace;
     this.arrowTex.anisotropy = 4;
     return this.arrowTex;
+  }
+
+  private chevTex: CanvasTexture | null = null;
+
+  /** Một chevron trắng mập bo đầu có bóng đổ nhẹ, đứng chính giữa ảnh (chỉ lên); ba chevron được xếp đối xứng quanh tâm ô. */
+  private chevTexture(): CanvasTexture {
+    if (this.chevTex) return this.chevTex;
+    const cv = document.createElement('canvas');
+    cv.width = cv.height = 128;
+    const c = cv.getContext('2d')!;
+    c.lineJoin = 'round';
+    c.lineCap = 'round';
+    const path = (): void => {
+      c.beginPath();
+      c.moveTo(14, 82);
+      c.lineTo(64, 38);
+      c.lineTo(114, 82);
+    };
+    path();
+    c.lineWidth = 30;
+    c.strokeStyle = 'rgba(14,60,140,0.5)';
+    c.save();
+    c.translate(0, 4);
+    c.stroke();
+    c.restore();
+    path();
+    c.lineWidth = 22;
+    c.strokeStyle = '#ffffff';
+    c.stroke();
+    this.chevTex = new CanvasTexture(c.canvas);
+    this.chevTex.colorSpace = SRGBColorSpace;
+    this.chevTex.anisotropy = 4;
+    return this.chevTex;
   }
 
   private swirlTexture(): CanvasTexture {
@@ -1931,6 +2311,7 @@ export class BoardScene {
     const W = level.width;
     const H = level.height;
     this.portalAnim = [];
+    this.arrowAnim = [];
     const top = TILE_TOP + 0.045;
     for (const q of level.sticky ?? []) {
       const p = cellToWorld(W, H, q.x, q.y);
@@ -1955,10 +2336,22 @@ export class BoardScene {
       const holder = new Group();
       holder.position.set(p.x, top, p.z);
       holder.rotation.y = q.dir === 'up' ? 0 : q.dir === 'right' ? -Math.PI / 2 : q.dir === 'down' ? Math.PI : Math.PI / 2;
-      const m = new Mesh(new PlaneGeometry(0.92, 0.92), new MeshBasicMaterial({ map: this.arrowTexture(), transparent: true, depthWrite: false }));
+      const m = new Mesh(new PlaneGeometry(1, 1), new MeshBasicMaterial({ map: this.arrowTexture(), transparent: true, depthWrite: false }));
       m.rotation.x = -Math.PI / 2;
       m.renderOrder = 1;
       holder.add(m);
+      // ba chevron xếp đối xứng quanh tâm ô (-0.2, 0, +0.2 dọc theo hướng mũi tên), sáng lần lượt từ sau ra trước
+      const mats: MeshBasicMaterial[] = [];
+      for (let k = 0; k < 3; k++) {
+        const cm = new MeshBasicMaterial({ map: this.chevTexture(), transparent: true, depthWrite: false, opacity: 1 });
+        const cmesh = new Mesh(new PlaneGeometry(0.46, 0.46), cm);
+        cmesh.rotation.x = -Math.PI / 2;
+        cmesh.position.set(0, 0.004, 0.2 - 0.2 * k); // k = 0 ở phía sau (z dương), k = 2 ở phía trước (đích)
+        cmesh.renderOrder = 2;
+        holder.add(cmesh);
+        mats.push(cm);
+      }
+      this.arrowAnim.push(mats);
       this.staticGroup.add(holder);
     }
     (level.portals ?? []).forEach((pair, i) => {
@@ -1986,6 +2379,12 @@ export class BoardScene {
 
   /** Cổng dịch chuyển xoáy liên tục và vành thở nhẹ. */
   private updateSpecials(nowS: number): void {
+    for (const mats of this.arrowAnim) {
+      mats.forEach((m, k) => {
+        const w = 0.5 + 0.5 * Math.sin(2 * Math.PI * (nowS * 0.8 - k / 3)); // sóng chạy từ chevron sau (k=0) ra chevron trước (k=2), tức theo hướng mũi tên
+        m.opacity = 0.35 + 0.65 * w * w;
+      });
+    }
     for (const a of this.portalAnim) {
       a.disc.rotation.z = nowS * a.speed;
       const s = 1 + 0.05 * Math.sin(nowS * 3 + a.phase);
@@ -2078,15 +2477,20 @@ function axisTexture(): CanvasTexture {
 function makeBall(color: string, geo: BufferGeometry, axis?: 'h' | 'v', hidden?: boolean): BallObj {
   const hex = COLOR_HEX[color] ?? '#888888';
   const group = new Group();
-  const body = jellyMaterial(hex, 0.78);
+  const body = jellyMaterial(hex, 0.88);
   const mesh = new Mesh(geo, body);
   mesh.castShadow = true;
   mesh.receiveShadow = true;
   mesh.renderOrder = 2;
-  const core = new MeshStandardMaterial({ color: new Color(hex).lerp(WHITE, 0.25), emissive: hex, emissiveIntensity: 0.3, roughness: 0.4 });
+  // lõi đậm hơn vỏ và phát sáng nhẹ: nhìn xuyên lớp vỏ thấy màu sâu như thạch thật
+  const core = new MeshStandardMaterial({ color: new Color(hex).lerp(WHITE, 0.05), emissive: hex, emissiveIntensity: 0.55, roughness: 0.35 });
   const coreMesh = new Mesh(new RoundedBoxGeometry(BALL.w * 0.62, BALL.h * 0.6, BALL.w * 0.62, 4, 0.16), core);
   coreMesh.position.y = -0.04;
-  group.add(coreMesh, mesh);
+  // viền hoạt hình: vỏ lộn ngược đẩy ra theo pháp tuyến một khoảng không đổi, màu xanh đen đậm pha chút tông của khối (không đen tuyền)
+  const rimMat = rimMaterial(hex, 0.05);
+  const rim = new Mesh(geo, rimMat);
+  rim.renderOrder = 1;
+  group.add(coreMesh, rim, mesh);
   // bọt khí nhỏ trong thạch
   const bubble = new MeshBasicMaterial({ color: '#ffffff', transparent: true, opacity: 0.35, depthWrite: false });
   for (const [x, y, z, r] of [[-0.22, 0.14, 0.2, 0.05], [0.24, -0.12, -0.18, 0.04], [0.1, 0.24, -0.24, 0.035], [-0.3, -0.2, -0.1, 0.03]] as const) {
@@ -2096,12 +2500,18 @@ function makeBall(color: string, geo: BufferGeometry, axis?: 'h' | 'v', hidden?:
     group.add(bm);
   }
   // vệt sáng phản chiếu trên mặt trên (góc trên trái)
-  const shine = new Mesh(new SphereGeometry(1, 16, 10), new MeshBasicMaterial({ color: '#ffffff', transparent: true, opacity: 0.55, depthWrite: false }));
-  shine.scale.set(0.22, 0.02, 0.1);
+  const shine = new Mesh(new SphereGeometry(1, 16, 10), new MeshBasicMaterial({ color: '#ffffff', transparent: true, opacity: 0.7, depthWrite: false }));
+  shine.scale.set(0.26, 0.02, 0.11);
   shine.position.set(-0.2, BALL.h / 2 + 0.005, -0.18);
   shine.rotation.y = 0.5;
   shine.renderOrder = 4;
   group.add(shine);
+  // chấm sáng nhỏ thứ hai bên cạnh vệt sáng: bề mặt bóng ướt
+  const glint = new Mesh(new SphereGeometry(1, 10, 8), new MeshBasicMaterial({ color: '#ffffff', transparent: true, opacity: 0.8, depthWrite: false }));
+  glint.scale.set(0.045, 0.02, 0.045);
+  glint.position.set(0.02, BALL.h / 2 + 0.006, -0.2);
+  glint.renderOrder = 4;
+  group.add(glint);
   // thạch một trục: mũi tên hai đầu in trên mặt trên, chỉ ra trục trượt (ngang hoặc dọc)
   if (axis) {
     const arrow = new Mesh(new PlaneGeometry(0.62, 0.62), new MeshBasicMaterial({ map: axisTexture(), transparent: true, depthWrite: false }));
@@ -2122,7 +2532,7 @@ function makeBall(color: string, geo: BufferGeometry, axis?: 'h' | 'v', hidden?:
     q.renderOrder = 5;
     group.add(q);
   }
-  return { hex, q, group, body, core, mesh, un: noUnravel() };
+  return { hex, q, group, body, core, rim: rimMat, mesh, un: noUnravel() };
 }
 
 let questionTex: CanvasTexture | null = null;
@@ -2134,7 +2544,7 @@ function questionTexture(): CanvasTexture {
   cv.width = 128;
   cv.height = 128;
   const c = cv.getContext('2d')!;
-  c.font = '110px "Lilita One", system-ui, sans-serif';
+  c.font = '110px "Nunito", system-ui, sans-serif';
   c.textAlign = 'center';
   c.textBaseline = 'middle';
   c.lineJoin = 'round';

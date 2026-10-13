@@ -17,8 +17,11 @@ import {
   type Dir,
   type Level,
   type MoveResult,
+  type Pos,
   type State,
 } from './rules';
+
+const STEP: Record<Dir, Pos> = { up: { x: 0, y: -1 }, down: { x: 0, y: 1 }, left: { x: -1, y: 0 }, right: { x: 1, y: 0 } };
 
 export type BoosterKey = 'pin' | 'bomb' | 'magnet' | 'basket';
 
@@ -29,6 +32,43 @@ export type Move =
   | { kind: 'bomb'; x: number; y: number }
   | { kind: 'magnet'; id: string }
   | { kind: 'basket'; side: Dir; index: number; depth?: number };
+
+/** Số ô mũi tên mà đường đi của chuỗi nước đi có chạy qua (mỗi ô tính một lần): để bắt các ô mũi tên thừa mà lời giải không dùng. */
+export function arrowsTouched(level: Level, moves: Move[]): number {
+  const arrows = level.arrows ?? [];
+  const seen = new Set<number>();
+  let state = createState(level);
+  for (const m of moves) {
+    const r = applyMove(state, m);
+    if (!r.ok) break;
+    const path = (r as { path?: Pos[] }).path;
+    if (path) for (const p of path) arrows.forEach((a, i) => a.x === p.x && a.y === p.y && seen.add(i));
+    state = r.state;
+  }
+  return seen.size;
+}
+
+/** Số cú dừng nhờ vệt trong chuỗi nước đi: `other` = vệt của khối KHÁC chặn, `own` = vệt của chính khối đó chặn. */
+export function brakeOwnership(level: Level, moves: Move[]): { other: number; own: number } {
+  let state = createState(level);
+  let other = 0;
+  let own = 0;
+  for (const m of moves) {
+    const r = applyMove(state, m);
+    if (!r.ok) break;
+    if (m.kind === 'slide' && (r as { stop?: string }).stop === 'trail') {
+      const to = (r as { to?: Pos }).to;
+      if (to) {
+        const dv = STEP[m.dir];
+        const t = state.trails.find((q) => q.x === to.x + dv.x && q.y === to.y + dv.y && trailLeft(state, q) > 0);
+        if (t?.owner === m.id) own++;
+        else other++;
+      }
+    }
+    state = r.state;
+  }
+  return { other, own };
+}
 
 export interface Solution {
   /** Các hành động theo thứ tự, kể cả booster. */

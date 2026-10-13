@@ -68,7 +68,7 @@ export function th(color: string): string {
   return out;
 }
 
-/** Chuỗi font cho ctx.font. Lilita One chỉ có một cut nên không ghi weight (tránh trình duyệt giả in đậm). */
+/** Chuỗi font cho ctx.font. Nunito được khai báo một cut (weight 400) nên không ghi weight (tránh trình duyệt giả in đậm). */
 export const font = (size: number): string => `${size}px ${FONT_STACK}`;
 
 export type ButtonKind = 'green' | 'blue' | 'red' | 'orange' | 'gold' | 'gray' | 'purple';
