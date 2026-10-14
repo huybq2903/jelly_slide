@@ -78,3 +78,13 @@ describe('solve', () => {
     expect(sol?.trailStops).toBe(1);
   });
 });
+
+describe('giải từ trạng thái đang chơi dở', () => {
+  it('from = trạng thái đầu thì giống giải từ đầu; còn quá ít lượt thì vô giải', async () => {
+    const { LEVELS } = await import('../levels');
+    const { createState } = await import('./rules');
+    const { level, minMoves } = LEVELS[1];
+    expect(solve(level, { from: createState(level) })?.length).toBe(minMoves);
+    expect(solve(level, { from: { ...createState(level), turn: level.maxMoves - 1 } })).toBeNull();
+  });
+});

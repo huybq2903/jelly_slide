@@ -77,10 +77,10 @@ function rimMaterial(hex: string, thick: number): MeshBasicMaterial {
 }
 
 function jellyMaterial(hex: string, opacity = 0.8): MeshPhysicalMaterial {
-  return new MeshPhysicalMaterial({
+  const m = new MeshPhysicalMaterial({
     color: hex,
     emissive: hex,
-    emissiveIntensity: 0.12,
+    emissiveIntensity: 0.2,
     roughness: 0.07,
     metalness: 0,
     clearcoat: 1,
@@ -90,6 +90,12 @@ function jellyMaterial(hex: string, opacity = 0.8): MeshPhysicalMaterial {
     ior: 1.45,
     specularIntensity: 1,
   });
+  // ánh sáng mép (fresnel): viền thạch ánh lên sáng hơn
+  m.onBeforeCompile = (sh) => {
+    sh.fragmentShader = sh.fragmentShader.replace('#include <emissivemap_fragment>', `#include <emissivemap_fragment>
+  totalEmissiveRadiance += vec3(0.55) * pow(1.0 - abs(dot(normalize(vNormal), normalize(vViewPosition))), 3.0) * 0.45;`);
+  };
+  return m;
 }
 
 // ---------- Mô tả cảnh (game.ts tính mỗi khung hình, toạ độ tính bằng ô) ----------
@@ -1136,8 +1142,8 @@ export class BoardScene {
    */
   private buildShapedBoard(W: number, H: number): void {
     const level = this.level!;
-    const gold = new MeshPhysicalMaterial({ color: '#b58a52', roughness: 0.32, metalness: 0.12, clearcoat: 0.7, clearcoatRoughness: 0.25 });
-    const brown = new MeshStandardMaterial({ color: '#6b3d0a', roughness: 0.6 });
+    const gold = new MeshPhysicalMaterial({ color: '#b79cf0', roughness: 0.32, metalness: 0.05, clearcoat: 0.7, clearcoatRoughness: 0.25 });
+    const brown = new MeshStandardMaterial({ color: '#3b2468', roughness: 0.6 });
     const F = 10; // số ô mịn trên một ô chơi
     const pad = 6;
     const GW = W * F + 2 * pad;
@@ -1230,10 +1236,10 @@ export class BoardScene {
     }
 
     // sàn dưới các ô và các ô sáng tối xen kẽ
-    const floorMat = new MeshStandardMaterial({ color: '#8099dc', roughness: 0.8 });
+    const floorMat = new MeshStandardMaterial({ color: '#6c5cc0', roughness: 0.8 });
     const tileGeo = new RoundedBoxGeometry(1, 0.4, 1, 3, 0.1); // ô bo tròn, có khe hở lộ sàn tối bên dưới (đủ cao để bán kính bo không bị chặn bởi chiều cao; phần thấp chìm dưới sàn)
-    const matA = new MeshStandardMaterial({ color: '#eef3ff', roughness: 0.55 });
-    const matB = new MeshStandardMaterial({ color: '#dce7ff', roughness: 0.55 });
+    const matA = new MeshStandardMaterial({ color: '#f1ecff', roughness: 0.55 });
+    const matB = new MeshStandardMaterial({ color: '#e0d6fa', roughness: 0.55 });
     const floorParts: BufferGeometry[] = []; // mọi ô sàn gộp thành một lưới (một lượt vẽ thay vì mỗi ô một lượt)
     for (let y = 0; y < H; y++) {
       for (let x = 0; x < W; x++) {
@@ -1263,8 +1269,8 @@ export class BoardScene {
 
   private buildBoard(W: number, H: number): void {
     if (this.level?.mask) return this.buildShapedBoard(W, H);
-    const gold = new MeshPhysicalMaterial({ color: '#b58a52', roughness: 0.32, metalness: 0.12, clearcoat: 0.7, clearcoatRoughness: 0.25 });
-    const brown = new MeshStandardMaterial({ color: '#6b3d0a', roughness: 0.6 });
+    const gold = new MeshPhysicalMaterial({ color: '#b79cf0', roughness: 0.32, metalness: 0.05, clearcoat: 0.7, clearcoatRoughness: 0.25 });
+    const brown = new MeshStandardMaterial({ color: '#3b2468', roughness: 0.6 });
     const roundedRect = (shape: Shape | Path, w: number, h: number, r: number): void => {
       const x = -w / 2;
       const y = -h / 2;
@@ -1310,14 +1316,14 @@ export class BoardScene {
     }
 
     // lòng bàn và các ô sáng tối xen kẽ
-    const floor = new Mesh(new PlaneGeometry(W + 0.12, H + 0.12), new MeshStandardMaterial({ color: '#8099dc', roughness: 0.8 }));
+    const floor = new Mesh(new PlaneGeometry(W + 0.12, H + 0.12), new MeshStandardMaterial({ color: '#6c5cc0', roughness: 0.8 }));
     floor.rotation.x = -Math.PI / 2;
     floor.position.y = -0.02;
     floor.receiveShadow = true;
     this.staticGroup.add(floor);
     const tileGeo = new RoundedBoxGeometry(1, 0.4, 1, 3, 0.1); // ô bo tròn, có khe hở lộ sàn tối bên dưới (đủ cao để bán kính bo không bị chặn bởi chiều cao; phần thấp chìm dưới sàn)
-    const matA = new MeshStandardMaterial({ color: '#eef3ff', roughness: 0.55 });
-    const matB = new MeshStandardMaterial({ color: '#dce7ff', roughness: 0.55 });
+    const matA = new MeshStandardMaterial({ color: '#f1ecff', roughness: 0.55 });
+    const matB = new MeshStandardMaterial({ color: '#e0d6fa', roughness: 0.55 });
     for (let y = 0; y < H; y++) {
       for (let x = 0; x < W; x++) {
         const t = new Mesh(tileGeo, (x + y) % 2 ? matB : matA);
@@ -1333,42 +1339,15 @@ export class BoardScene {
   /** Mô hình hộp cứng xám trắng dùng cho cả tường của level lẫn khối do booster Block đặt. */
   private wallGroup(): Group {
     const g = new Group();
-    // hộp cứng xám trắng, góc vuông: thân xám nhạt, nắp trắng hơi nhô lên, ba rãnh tối ở mặt trên và chân đế xám đậm
-    const body = new Mesh(new BoxGeometry(0.96, WALL_H, 0.96), new MeshStandardMaterial({ color: '#a4abb6', roughness: 0.6, metalness: 0.15 }));
-    body.position.y = WALL_H / 2;
+    // khối kẹo cứng bo tròn: thân tím xám bóng, nắp sáng hơn, không đinh
+    const body = new Mesh(new RoundedBoxGeometry(0.94, WALL_H + 0.05, 0.94, 4, 0.16), new MeshPhysicalMaterial({ color: '#7a70b8', roughness: 0.35, clearcoat: 0.8, clearcoatRoughness: 0.25 }));
+    body.position.y = (WALL_H + 0.05) / 2;
     body.castShadow = true;
     body.receiveShadow = true;
     g.add(body);
-    const cap = new Mesh(new BoxGeometry(0.88, 0.05, 0.88), new MeshStandardMaterial({ color: '#c2c8d0', roughness: 0.55, metalness: 0.1 }));
-    cap.position.y = WALL_H + 0.025;
-    cap.castShadow = true;
+    const cap = new Mesh(new RoundedBoxGeometry(0.66, 0.06, 0.66, 3, 0.025), new MeshPhysicalMaterial({ color: '#a49cd8', roughness: 0.3, clearcoat: 0.9 }));
+    cap.position.y = WALL_H + 0.05;
     g.add(cap);
-    const base = new Mesh(new BoxGeometry(0.98, 0.07, 0.98), new MeshStandardMaterial({ color: '#8a919c', roughness: 0.7, metalness: 0.2 }));
-    base.position.y = 0.035;
-    base.receiveShadow = true;
-    g.add(base);
-    // mặt trên: ô lõm xám đậm, bên trong một tấm nổi xám nhạt, bốn đinh tán ở góc
-    const panelM = new MeshStandardMaterial({ color: '#7f8793', roughness: 0.7, metalness: 0.2 });
-    const inset = new Mesh(new BoxGeometry(0.62, 0.012, 0.62), panelM);
-    inset.position.set(0, WALL_H + 0.056, 0);
-    g.add(inset);
-    const plate = new Mesh(new BoxGeometry(0.46, 0.02, 0.46), new MeshStandardMaterial({ color: '#b0b7c1', roughness: 0.55, metalness: 0.15 }));
-    plate.position.set(0, WALL_H + 0.068, 0);
-    plate.castShadow = true;
-    g.add(plate);
-    const boltM = new MeshStandardMaterial({ color: '#6e7580', roughness: 0.4, metalness: 0.5 });
-    for (const [bx, bz] of [[-0.35, -0.35], [0.35, -0.35], [-0.35, 0.35], [0.35, 0.35]] as const) {
-      const bolt = new Mesh(new CylinderGeometry(0.035, 0.035, 0.03, 10), boltM);
-      bolt.position.set(bx, WALL_H + 0.065, bz);
-      g.add(bolt);
-    }
-    // hai đường ốp ngang ở thân
-    const band = new MeshStandardMaterial({ color: '#aeb5bf', roughness: 0.6 });
-    for (const y of [0.17, 0.33]) {
-      const bd = new Mesh(new BoxGeometry(0.975, 0.02, 0.975), band);
-      bd.position.y = y;
-      g.add(bd);
-    }
     return g;
   }
 
@@ -1425,12 +1404,27 @@ export class BoardScene {
     const TOP = RING_TOP + 0.12; // cửa cao hơn khung một chút
     const outSign = side === 'up' || side === 'left' ? -1 : 1;
     const mat = doorMaterial(hex);
-    mat.color.offsetHSL(0, 0.25, 0.03); // sơn đậm và rực hơn một chút cho đồng bộ với thạch
+    mat.color.offsetHSL(0, 0.3, 0.05); // sơn đậm và rực hơn một chút cho đồng bộ với thạch
     const door = new Mesh(new RoundedBoxGeometry(LONG, TOP - BOTTOM, THICK, 4, 0.13), mat);
     door.position.set(alongShift, (TOP + BOTTOM) / 2 - g.position.y, outSign * (OUT + SHIFT));
     door.castShadow = true;
     door.receiveShadow = true;
     g.add(door);
+    // hai thanh viền vàng chạy dọc mép trên của cửa
+    const trimMat = new MeshPhysicalMaterial({ color: '#ffd35a', roughness: 0.25, metalness: 0.5, clearcoat: 0.8 });
+    for (const sgn of [-1, 1]) {
+      const rail = new Mesh(new RoundedBoxGeometry(LONG - 0.1, 0.05, 0.07, 2, 0.02), trimMat);
+      rail.position.set(alongShift, TOP - g.position.y + 0.012, door.position.z + sgn * (THICK / 2 - 0.06));
+      g.add(rail);
+    }
+    for (const sgn of [-1, 1]) {
+      const post = new Mesh(new RoundedBoxGeometry(0.12, 0.2, THICK + 0.04, 3, 0.04), trimMat);
+      post.position.set(alongShift + sgn * (LONG / 2 - 0.06), TOP - g.position.y, door.position.z);
+      g.add(post);
+      const orb = new Mesh(new SphereGeometry(0.075, 14, 10), trimMat);
+      orb.position.set(post.position.x, post.position.y + 0.14, post.position.z);
+      g.add(orb);
+    }
     const rainbow = new Mesh(door.geometry, rainbowDoorMaterial());
     rainbow.position.copy(door.position);
     rainbow.scale.setScalar(1.004);
@@ -1450,13 +1444,13 @@ export class BoardScene {
       m.renderOrder = 5;
       this.staticGroup.add(m);
     };
-    const mark = new Mesh(new PlaneGeometry(0.3, 0.3), decalMat('triangle'));
+    const mark = new Mesh(new PlaneGeometry(0.46, 0.46), decalMat('triangle'));
     // tam giác mặc định chỉ về phía -z; xoay quanh trục đứng để chỉ ra ngoài theo từng cạnh
     mark.rotation.order = 'YXZ';
     const decalOff = horizontal ? alongShift : -alongShift; // mũi tên / dấu ✓ nằm giữa mặt cửa (cửa có thể lệch tâm ô)
     place(mark, decalOff);
     mark.rotation.y = side === 'up' ? 0 : side === 'down' ? Math.PI : side === 'left' ? Math.PI / 2 : -Math.PI / 2;
-    const check = new Mesh(new PlaneGeometry(0.3, 0.3), decalMat('check'));
+    const check = new Mesh(new PlaneGeometry(0.46, 0.46), decalMat('check'));
     place(check, decalOff);
     check.visible = false;
     const inward = side === 'up' ? new Vector3(0, 0, 1) : side === 'down' ? new Vector3(0, 0, -1) : side === 'left' ? new Vector3(1, 0, 0) : new Vector3(-1, 0, 0);
@@ -2487,7 +2481,7 @@ function makeBall(color: string, geo: BufferGeometry, axis?: 'h' | 'v', hidden?:
   const coreMesh = new Mesh(new RoundedBoxGeometry(BALL.w * 0.62, BALL.h * 0.6, BALL.w * 0.62, 4, 0.16), core);
   coreMesh.position.y = -0.04;
   // viền hoạt hình: vỏ lộn ngược đẩy ra theo pháp tuyến một khoảng không đổi, màu xanh đen đậm pha chút tông của khối (không đen tuyền)
-  const rimMat = rimMaterial(hex, 0.05);
+  const rimMat = rimMaterial(hex, 0.025);
   const rim = new Mesh(geo, rimMat);
   rim.renderOrder = 1;
   group.add(coreMesh, rim, mesh);
@@ -2501,11 +2495,18 @@ function makeBall(color: string, geo: BufferGeometry, axis?: 'h' | 'v', hidden?:
   }
   // vệt sáng phản chiếu trên mặt trên (góc trên trái)
   const shine = new Mesh(new SphereGeometry(1, 16, 10), new MeshBasicMaterial({ color: '#ffffff', transparent: true, opacity: 0.7, depthWrite: false }));
-  shine.scale.set(0.26, 0.02, 0.11);
+  shine.scale.set(0.31, 0.02, 0.135);
   shine.position.set(-0.2, BALL.h / 2 + 0.005, -0.18);
   shine.rotation.y = 0.5;
   shine.renderOrder = 4;
   group.add(shine);
+  // quầng sáng mềm rộng hơn quanh vệt sáng
+  const sheen = new Mesh(new SphereGeometry(1, 16, 10), new MeshBasicMaterial({ color: '#ffffff', transparent: true, opacity: 0.16, depthWrite: false }));
+  sheen.scale.set(0.42, 0.02, 0.24);
+  sheen.position.set(-0.12, BALL.h / 2 + 0.004, -0.12);
+  sheen.rotation.y = 0.5;
+  sheen.renderOrder = 4;
+  group.add(sheen);
   // chấm sáng nhỏ thứ hai bên cạnh vệt sáng: bề mặt bóng ướt
   const glint = new Mesh(new SphereGeometry(1, 10, 8), new MeshBasicMaterial({ color: '#ffffff', transparent: true, opacity: 0.8, depthWrite: false }));
   glint.scale.set(0.045, 0.02, 0.045);

@@ -128,8 +128,8 @@ export function drawRestartIcon(ctx: CanvasRenderingContext2D, cx: number, cy: n
   ctx.translate(-cx, -cy);
   iconStyle(ctx, radius * 0.17);
   const r = radius * 0.5;
-  const start = -Math.PI * 0.35;
-  const end = Math.PI * 1.55;
+  const start = -Math.PI * 0.2;
+  const end = Math.PI * 1.35;
   ctx.beginPath();
   ctx.arc(cx, cy, r, start, end);
   ctx.stroke();
@@ -139,7 +139,7 @@ export function drawRestartIcon(ctx: CanvasRenderingContext2D, cx: number, cy: n
   const ty = Math.cos(end);
   const nx = Math.cos(end);
   const ny = Math.sin(end);
-  const h = radius * 0.34;
+  const h = radius * 0.42;
   ctx.beginPath();
   ctx.moveTo(ex + tx * h, ey + ty * h);
   ctx.lineTo(ex + nx * h * 0.8, ey + ny * h * 0.8);

@@ -1,6 +1,7 @@
 // Jelly Slide — game thạch. Lõi luật ở src/core, phần vẽ ở src/render.ts;
 // file này nối trạng thái, vuốt, hoạt ảnh và hợp đồng FalconGame.
 
+import { solve, SolverLimit } from './core/solver';
 import { armWild, createState, gateCell, gateKey, gateOpen, isEmptyCell, isPinnable, trailLeft, magnetGate, placeBomb, placePin, slide, status, undo, undoDir, useMagnet, type BoosterMove, type BoosterResult, type Dir, type MoveResult, type Pos, type State } from './core/rules';
 import { BOOSTERS, UNLOCK_GIFT, add as addBooster, countOf, defOf, isGranted, logUse, spend, unlockLevel, unlocksAt, watchAdFor, type BoosterKey } from './boosters';
 import { drawBoosterIcon, drawBoosterSlot, drawCoin, type BoosterSlotState } from './booster-art';
@@ -284,6 +285,9 @@ const OOM_IN_MS = 300;
 const OOM_HOLD_MS = 700;
 const OOM_OUT_MS = 270;
 let loseBanner: { t0: number } | null = null;
+// Thế bí: solver không còn đường thắng (kể cả hoàn tác, chưa tính booster nếu không có) thì hiện banner nhắc thử lại / dùng booster.
+let deadBanner = false;
+let deadTimer = 0;
 // ---------- Luồng thắng ----------
 // Nhịp: chữ vào (chồng lên nhau) → logo co lại lấy đà → phồng → ĐẬP xuống (haptic) → giữ ngắn → logo thu nhỏ → popup Next Level, lúc đó pháo giấy
 // mới bắn từ hai góc dưới (trái, phải, rồi loạt vọng). Chạm màn hình sau cú đập là bỏ qua tới popup.
@@ -428,6 +432,8 @@ function startLevel(i: number, instant = false, slide = false): void {
   ended = false;
   revived = false;
   loseBanner = null;
+  deadBanner = false;
+  window.clearTimeout(deadTimer);
   winShow = null;
   winConfetti = null;
   confetti.clear();
@@ -465,7 +471,7 @@ function startLevel(i: number, instant = false, slide = false): void {
 function finishIfOver(): void {
   if (ended) return;
   const st = status(state);
-  if (st === 'playing') return;
+  if (st === 'playing') return scheduleDeadCheck();
   ended = true;
   armed = null;
   endedAt = performance.now();
@@ -487,6 +493,23 @@ function finishIfOver(): void {
     if (revived) finalLose();
     else openModal('continue');
   }, OOM_DELAY_MS + OOM_IN_MS + OOM_HOLD_MS + OOM_OUT_MS);
+}
+
+/** Sau mỗi nước đi: kiểm tra (không chặn khung hình) xem còn đường thắng không. */
+function scheduleDeadCheck(): void {
+  deadBanner = false;
+  window.clearTimeout(deadTimer);
+  if (tutCur() || LEVELS[index].tutorial) return;
+  const s = state;
+  deadTimer = window.setTimeout(() => {
+    if (state !== s || ended) return;
+    try {
+      deadBanner = !solve(s.level, { maxNodes: 60000, from: s });
+    } catch (e) {
+      if (!(e instanceof SolverLimit)) throw e; // quá lớn: chưa biết, không báo
+    }
+    invalidate();
+  }, 40);
 }
 
 /** Kết thúc màn trình diễn thắng (hết giờ hoặc người chơi chạm bỏ qua): hiện popup Next Level ngay. Pháo giấy còn rơi tiếp. */
@@ -1030,7 +1053,7 @@ function showToast(text: string): void {
 
 /** `a0` = độ mở lúc bắt đầu chuyển (0..1), để đóng/mở giữa chừng không bị giật. */
 let menu = { open: false, t0: -1e9, a0: 0 };
-const MENU_ORDER = ['music', 'sound', 'haptic', 'retry'] as const;
+const MENU_ORDER = ['music', 'sound', 'haptic'] as const;
 type MenuItem = (typeof MENU_ORDER)[number];
 
 function menuAmount(now: number): number {
@@ -1152,12 +1175,12 @@ function menuItemPos(w: number, h: number, i: number): { x: number; y: number } 
   return { x: g.cx, y: g.cy - 66 * (i + 1) };
 }
 
+/** Nút chơi lại ở góc phải trên màn hình. */
+function restartButton(w: number): { cx: number; cy: number; r: number } {
+  return { cx: w - 36, cy: safeTop + 38, r: 24 };
+}
+
 function pressMenuItem(item: MenuItem): void {
-  if (item === 'retry') {
-    setMenu(false);
-    requestRestart();
-    return;
-  }
   const on = settings.toggle(item);
   if (item === 'music') refreshMusic();
   if (item === 'sound' && on) play('tap');
@@ -1181,8 +1204,7 @@ function drawMenu(now: number, w: number, h: number): void {
     const py = g.cy + (pos.y - g.cy) * e;
     ctx.save();
     ctx.globalAlpha = Math.min(1, p * 1.5);
-    if (item === 'retry') R.drawRestartIcon(ctx, px, py, g.r - 3, true, pressOf('menu:retry'));
-    else R.drawToggleButton(ctx, px, py, g.r - 3, item, settings.get(item), pressOf(`menu:${item}`));
+    R.drawToggleButton(ctx, px, py, g.r - 3, item, settings.get(item), pressOf(`menu:${item}`));
     ctx.restore();
   });
   R.drawGearIcon(ctx, g.cx, g.cy, g.r, a * Math.PI * 2, !paused && !modal, pressOf('gear'));
@@ -1644,6 +1666,8 @@ function draw(now: number): void {
   // nhãn độ khó nằm ngay dưới chữ Level; có nhãn thì viên thuốc lượt đi lùi xuống một hàng
   const tagRow = tag ? 22 : 0;
   if (tag) drawTierTag(ctx, w / 2 - tierTagWidth(tag) / 2, safeTop + 47, tag);
+  const rbt = restartButton(w);
+  R.drawRestartIcon(ctx, rbt.cx, rbt.cy, rbt.r, true, pressOf('restart'));
   const mw = 112;
   const mh = 48;
   const mx = w / 2 - mw / 2;
@@ -1697,6 +1721,7 @@ function draw(now: number): void {
     K.strokedText(ctx, text, w / 2, cy, 17, '#ffffff', '#102a6c');
     ctx.restore();
   };
+  if (deadBanner && !anim && !modal && !ended) pill('Đã hết đường, hãy thử lại hoặc dùng booster', br.y + 30, 'rgba(170,30,50,0.92)');
   if (toast && now < toast.until) pill(toast.text, br.y + 30, 'rgba(10,25,80,0.88)', Math.max(0, Math.min(1, (now - (toast.until - 1700)) / 160, (toast.until - now) / 260)));
   ctx.save();
   ctx.translate(0, bottomOff);
@@ -2906,6 +2931,8 @@ function buttonAt(x: number, y: number): HudButton | null {
     const ti = BOOSTERS.findIndex((_, i) => Math.hypot(x - slotX(w, i), y - slotY(h)) <= 36);
     return ti >= 0 && BOOSTERS[ti].key === tst.key ? { id: `slot:${tst.key}`, act: () => onBoosterTap(tst.key) } : null;
   }
+  const rb = restartButton(w);
+  if (Math.hypot(x - rb.cx, y - rb.cy) <= rb.r + 6) return { id: 'restart', act: requestRestart };
   const gb = gearButton(w, h);
   const onGear = Math.hypot(x - gb.cx, y - gb.cy) <= gb.r + 6;
   if (menu.open) {

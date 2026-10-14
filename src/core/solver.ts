@@ -91,6 +91,8 @@ export interface SolveOptions {
   boosters?: Partial<Record<BoosterKey, number>>;
   /** Số nút tối đa được mở rộng; vượt thì ném SolverLimit (để bộ sinh bỏ ứng viên thay vì hết bộ nhớ). */
   maxNodes?: number;
+  /** Giải từ trạng thái này (đang chơi dở) thay vì từ đầu level. */
+  from?: State;
 }
 
 /** Solver vượt giới hạn `maxNodes`: kết quả không xác định. */
@@ -217,7 +219,7 @@ function boosterMoves(state: State, rem: Partial<Record<BoosterKey, number>>): M
 export function solve(level: Level, opts: SolveOptions = {}): Solution | null {
   const withUndo = opts.undo ?? true;
   const startRem = { ...(opts.boosters ?? {}) };
-  const nodes: Node[] = [{ state: createState(level), parent: -1, move: null, trailStop: false, rem: startRem }];
+  const nodes: Node[] = [{ state: opts.from ?? createState(level), parent: -1, move: null, trailStop: false, rem: startRem }];
   const seen = new Set<string>([key(nodes[0].state, withUndo, remKey(startRem))]);
   const hasBoosters = BOOSTER_KEYS.some((k) => (startRem[k] ?? 0) > 0);
   const cap = opts.maxNodes ?? Infinity;

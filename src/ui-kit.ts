@@ -133,10 +133,10 @@ export function quiltBackground(ctx: CanvasRenderingContext2D, w: number, h: num
   ctx.fillStyle = g;
   ctx.fillRect(0, 0, w, h);
   ctx.save();
-  ctx.strokeStyle = 'rgba(255,255,255,0.1)';
-  ctx.lineWidth = 2;
-  ctx.setLineDash([7, 7]);
-  const s = 72;
+  ctx.strokeStyle = 'rgba(255,255,255,0.22)';
+  ctx.lineWidth = 2.5;
+  ctx.setLineDash([8, 8]);
+  const s = 84;
   for (let k = -h; k < w + h; k += s) {
     ctx.beginPath();
     ctx.moveTo(k, 0);
